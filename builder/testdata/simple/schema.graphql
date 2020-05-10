@@ -1,0 +1,16 @@
+# helps
+scalar YesNo
+
+schema {
+  query: Query
+}
+
+type EchoPayload {
+  result: String!
+}
+
+type Query {
+    randomNumber(id: Int!): Int
+    randomYesOrNo(id: Int!): YesNo!
+    echo(txt: String!): EchoPayload!
+}
