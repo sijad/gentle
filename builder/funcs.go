@@ -8,7 +8,7 @@ import (
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 )
 
-func firstLowerRune(s string) string {
+func lowerFirstRune(s string) string {
 	r := []rune(s)
 	r[0] = unicode.ToLower(r[0])
 	return string(r)
@@ -38,5 +38,18 @@ func nilAbleTypeRef(typ *introspection.TypeRef, nilAble bool) *introspection.Typ
 	return &introspection.TypeRef{
 		Kind:   introspection.NONNULL,
 		OfType: typ,
+	}
+}
+
+func gqlType(typ *introspection.TypeRef) string {
+	switch typ.Kind {
+	case introspection.LIST:
+		return "[" + gqlType(typ.OfType) + "]"
+	case introspection.NONNULL:
+		return gqlType(typ.OfType) + "!"
+	case introspection.SCALAR:
+		return *typ.Name
+	default:
+		panic("not implimented")
 	}
 }

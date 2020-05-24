@@ -3,6 +3,9 @@ package builder
 import (
 	"fmt"
 	"go/types"
+	"log"
+	"os"
+	"text/template"
 
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 )
@@ -13,13 +16,17 @@ type GQLType struct {
 }
 
 type gqlBuilder struct {
-	types     []GQLType
-	typeMap   map[string]int
-	typeIdMap map[string]int
+	types   []GQLType
+	typeMap map[string]int
 }
 
 func (g *gqlBuilder) GetFullType(name string) *introspection.FullType {
-	return nil
+	index, ok := g.typeMap[name]
+	fmt.Println(index)
+	if !ok {
+		return nil
+	}
+	return &g.types[index].Typ
 }
 
 func (g *gqlBuilder) GetTypeRef(name string) *introspection.TypeRef {
@@ -35,6 +42,7 @@ func (g *gqlBuilder) AddFullType(id string, typ introspection.FullType) error {
 	}
 
 	g.types = append(g.types, GQLType{id, typ})
+	g.typeMap[typ.Name] = len(g.types) - 1
 
 	return nil
 }
@@ -74,7 +82,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 				continue
 			}
 
-			fieldName := firstLowerRune(typeField.Name())
+			fieldName := typeField.Name()
 			field := introspection.NewField()
 			field.Name = fieldName
 			// TODO field.Description
@@ -116,6 +124,42 @@ func (g *gqlBuilder) ImportQueryType(typ types.Type) error {
 	return err
 }
 
+func (g *gqlBuilder) SDL() string {
+	const sdl = `
+{{- range $t := .Types -}}
+type {{$t.Name}} {
+{{- range $f := $t.Fields}}
+  {{$f.Name | lowerFirstRune}}: {{$f.Type | gqlType}}
+{{- end}}
+}
+{{- end -}}
+`
+	funcMap := template.FuncMap{
+		"gqlType":        gqlType,
+		"lowerFirstRune": lowerFirstRune,
+	}
+
+	t := template.Must(template.New("sdl").Funcs(funcMap).Parse(sdl))
+
+	type Data struct {
+		Types []introspection.FullType
+	}
+	var types []introspection.FullType
+	for _, t := range g.types {
+		types = append(types, t.Typ)
+	}
+	d := Data{types}
+
+	err := t.Execute(os.Stdout, d)
+	if err != nil {
+		log.Println("executing template:", err)
+	}
+
+	return ""
+}
+
 func NewGQLBuilder() *gqlBuilder {
-	return &gqlBuilder{}
+	b := &gqlBuilder{}
+	b.typeMap = make(map[string]int)
+	return b
 }
