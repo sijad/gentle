@@ -56,7 +56,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 			Name: &name,
 		}, nilAble), nil
 	case *types.Slice:
-		ofType, err := g.ImportType(nil, x.Elem(), nilAble)
+		ofType, err := g.ImportType(nil, x.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +68,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 		if nilAble {
 			return nil, fmt.Errorf("Multiple indirection (*pointer) is not supported")
 		}
-		return g.ImportType(nil, x.Underlying(), true)
+		return g.ImportType(nil, x.Elem(), true)
 	case *types.Named:
 		name := x.Obj().Name()
 		id := x.Obj().Id()
