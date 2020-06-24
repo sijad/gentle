@@ -47,7 +47,7 @@ func (g *gqlBuilder) AddFullType(id string, typ introspection.FullType) error {
 	return nil
 }
 
-func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*introspection.TypeRef, error) {
+func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.TypeRef, error) {
 	switch x := t.(type) {
 	case *types.Basic:
 		name := basicTypeName(x.Kind())
@@ -56,7 +56,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 			Name: &name,
 		}, nilAble), nil
 	case *types.Slice:
-		ofType, err := g.ImportType(nil, x.Elem(), false)
+		ofType, err := g.ImportType(x.Elem(), false)
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +68,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 		if nilAble {
 			return nil, fmt.Errorf("Multiple indirection (*pointer) is not supported")
 		}
-		return g.ImportType(nil, x.Elem(), true)
+		return g.ImportType(x.Elem(), true)
 	case *types.Named:
 		name := x.Obj().Name()
 		id := x.Obj().Id()
@@ -87,7 +87,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 			field.Name = fieldName
 			// TODO field.Description
 
-			ftyp, err := g.ImportType(nil, typeField.Type(), false)
+			ftyp, err := g.ImportType(typeField.Type(), false)
 			if err != nil {
 				return nil, err
 			}
@@ -130,7 +130,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 							continue
 						}
 
-						atyp, err := g.ImportType(nil, argField.Type(), false)
+						atyp, err := g.ImportType(argField.Type(), false)
 						if err != nil {
 							return nil, err
 						}
@@ -145,7 +145,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 				// TODO add needed injectables
 			}
 
-			mtyp, err := g.ImportType(nil, methodSig.Results().At(0).Type(), false)
+			mtyp, err := g.ImportType(methodSig.Results().At(0).Type(), false)
 			if err != nil {
 				return nil, err
 			}
@@ -171,7 +171,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 }
 
 func (g *gqlBuilder) ImportQueryType(typ types.Type) error {
-	_, err := g.ImportType(nil, typ, false)
+	_, err := g.ImportType(typ, false)
 	// g.schema.QueryType = &introspection.TypeName{string(name)}
 	// TODO check if imported type is object, panic if not
 	return err
