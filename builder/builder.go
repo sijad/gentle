@@ -16,13 +16,13 @@ type GQLType struct {
 }
 
 type gqlBuilder struct {
-	types   []GQLType
-	typeMap map[string]int
+	types               []GQLType
+	typeMap             map[string]int
+	processingFullTypes map[string]bool
 }
 
 func (g *gqlBuilder) GetFullType(name string) *introspection.FullType {
 	index, ok := g.typeMap[name]
-	fmt.Println(index)
 	if !ok {
 		return nil
 	}
@@ -30,6 +30,13 @@ func (g *gqlBuilder) GetFullType(name string) *introspection.FullType {
 }
 
 func (g *gqlBuilder) GetTypeRef(name string) *introspection.TypeRef {
+	fullType := g.GetFullType(name)
+	if fullType != nil {
+		return &introspection.TypeRef{
+			Kind: fullType.Kind,
+			Name: &fullType.Name,
+		}
+	}
 	return nil
 }
 
@@ -73,6 +80,29 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 		name := x.Obj().Name()
 		id := x.Obj().Id()
 		strct := x.Underlying().(*types.Struct)
+		g.processingFullTypes[id] = true
+
+		// returns underlying element type and prevents infinite loop
+		underlingType := func(t types.Type) (*introspection.TypeRef, error) {
+			typ := t
+			if ptr, ok := typ.(*types.Pointer); ok {
+				typ = ptr.Elem()
+			}
+
+			if typ, ok := typ.(*types.Named); ok {
+				if ref := g.GetTypeRef(typ.Obj().Name()); ref != nil {
+					return ref, nil
+				}
+				if g.processingFullTypes[typ.Obj().Id()] {
+					return &introspection.TypeRef{
+						Kind: introspection.SCALAR,
+						Name: &name,
+					}, nil
+				}
+			}
+
+			return g.ImportType(typ, false)
+		}
 
 		var fields []introspection.Field
 		for i := 0; i < strct.NumFields(); i++ {
@@ -87,11 +117,10 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 			field.Name = fieldName
 			// TODO field.Description
 
-			ftyp, err := g.ImportType(typeField.Type(), false)
+			ftyp, err := underlingType(typeField.Type())
 			if err != nil {
 				return nil, err
 			}
-
 			field.Type = *ftyp
 			fields = append(fields, field)
 		}
@@ -130,7 +159,7 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 							continue
 						}
 
-						atyp, err := g.ImportType(argField.Type(), false)
+						atyp, err := underlingType(argField.Type())
 						if err != nil {
 							return nil, err
 						}
@@ -145,12 +174,14 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 				// TODO add needed injectables
 			}
 
-			mtyp, err := g.ImportType(methodSig.Results().At(0).Type(), false)
+			var rtyp *introspection.TypeRef
+			resultTyp := methodSig.Results().At(0)
+			rtyp, err := underlingType(resultTyp.Type())
 			if err != nil {
 				return nil, err
 			}
 
-			field.Type = *mtyp
+			field.Type = *rtyp
 			fields = append(fields, field)
 		}
 
@@ -220,5 +251,6 @@ type {{$t.Name}} {
 func NewGQLBuilder() *gqlBuilder {
 	b := &gqlBuilder{}
 	b.typeMap = make(map[string]int)
+	b.processingFullTypes = make(map[string]bool)
 	return b
 }
