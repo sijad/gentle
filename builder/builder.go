@@ -109,11 +109,8 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 			Kind: introspection.SCALAR,
 			Name: &name,
 		}, nilAble), nil
-	case *types.Struct:
-		fmt.Println(x)
-		return nil, nil
 	default:
-		panic(fmt.Sprintf("%T not implimented", x))
+		return nil, errors.New("not implimented")
 	}
 }
 
