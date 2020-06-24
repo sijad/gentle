@@ -129,7 +129,8 @@ type {{$t.Name}} {
   {{$f.Name | lowerFirstRune}}: {{$f.Type | gqlType}}
 {{- end}}
 }
-{{- end -}}
+
+{{end -}}
 `
 	funcMap := template.FuncMap{
 		"gqlType":        gqlType,
@@ -141,11 +142,7 @@ type {{$t.Name}} {
 	type Data struct {
 		Types []introspection.FullType
 	}
-	var types []introspection.FullType
-	for _, t := range g.types {
-		types = append(types, t.Typ)
-	}
-	d := Data{types}
+	d := Data{g.FullTypes()}
 
 	err := t.Execute(os.Stdout, d)
 	if err != nil {
