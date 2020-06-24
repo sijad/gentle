@@ -96,13 +96,69 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 			fields = append(fields, field)
 		}
 
+		for i := 0; i < x.NumMethods(); i++ {
+			method := x.Method(i)
+
+			if !method.Exported() {
+				continue
+			}
+
+			methodSig := method.Type().(*types.Signature)
+
+			fieldName := method.Name()
+			field := introspection.NewField()
+			field.Name = fieldName
+			// TODO field.Description
+
+			params := methodSig.Params()
+			for i := 0; i < params.Len(); i++ {
+				param := params.At(i)
+				if param.Name() == "args" {
+					var argsStruct *types.Struct
+					switch xx := param.Type().(type) {
+					case *types.Named:
+						argsStruct = xx.Underlying().(*types.Struct)
+					case *types.Struct:
+						argsStruct = xx
+					default:
+						return nil, fmt.Errorf("args can only be struct")
+					}
+					for i := 0; i < argsStruct.NumFields(); i++ {
+						argField := argsStruct.Field(i)
+
+						if !argField.Exported() {
+							continue
+						}
+
+						atyp, err := g.ImportType(nil, argField.Type(), false)
+						if err != nil {
+							return nil, err
+						}
+
+						field.Args = append(field.Args, introspection.InputValue{
+							Name: argField.Name(),
+							Type: *atyp,
+							// TODO Description: "",
+						})
+					}
+				}
+				// TODO add needed injectables
+			}
+
+			mtyp, err := g.ImportType(nil, methodSig.Results().At(0).Type(), false)
+			if err != nil {
+				return nil, err
+			}
+
+			field.Type = *mtyp
+			fields = append(fields, field)
+		}
+
 		fullType := introspection.NewFullType()
 		fullType.Kind = introspection.OBJECT
 		fullType.Name = name
 		// TODO fullType.Description
 		fullType.Fields = fields
-
-		// TODO ADD resolvers
 
 		g.AddFullType(id, fullType)
 		return nilAbleTypeRef(&introspection.TypeRef{
@@ -110,7 +166,7 @@ func (g *gqlBuilder) ImportType(name *string, t types.Type, nilAble bool) (*intr
 			Name: &name,
 		}, nilAble), nil
 	default:
-		return nil, errors.New("not implimented")
+		return nil, fmt.Errorf("not implimented")
 	}
 }
 
@@ -126,7 +182,16 @@ func (g *gqlBuilder) SDL() string {
 {{- range $t := .Types -}}
 type {{$t.Name}} {
 {{- range $f := $t.Fields}}
-  {{$f.Name | lowerFirstRune}}: {{$f.Type | gqlType}}
+  {{$f.Name | lowerFirstRune}}
+  {{- if gt (len $f.Args) 0 -}}
+    (
+      {{- range $i, $a := $f.Args}}
+        {{- if $i}}{{", "}}{{end -}}
+        {{- $a.Name | lowerFirstRune }}: {{$a.Type | gqlType -}}
+      {{ end -}}
+    )
+  {{- end -}}
+  : {{$f.Type | gqlType}}
 {{- end}}
 }
 
