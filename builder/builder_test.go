@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/types"
 	"testing"
@@ -19,7 +18,6 @@ func TestVarType(t *testing.T) {
 	}
 
 	builder := NewGQLBuilder()
-	generator := introspection.NewGenerator()
 
 	for _, pkg := range pkgs {
 		for _, v := range pkg.TypesInfo.Defs {
@@ -41,18 +39,6 @@ func TestVarType(t *testing.T) {
 
 	schema := introspection.NewSchema()
 	schema.QueryType = &introspection.TypeName{Name: "MyStruct"}
-	var types []introspection.FullType
-	for _, t := range builder.types {
-		types = append(types, t.Typ)
-	}
-
-	schema.Types = []introspection.FullType(types)
-	generator.Data = &introspection.Data{Schema: schema}
-	json.Marshal(generator)
-
-	if err != nil {
-		t.Error(err)
-	}
 
 	fmt.Println(builder.SDL())
 	fmt.Println(builder.Code())

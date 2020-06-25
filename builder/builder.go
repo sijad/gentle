@@ -16,24 +16,31 @@ import (
 
 var scalarInterface = reflect.TypeOf(struct{ gentle.Scalar }{}).Field(0).Type
 
-type GQLType struct {
-	Id  string
-	Typ introspection.FullType
+type Field struct {
+	introspection.Field
+	IsMethod bool
+	HasError bool
+}
+
+type FullType struct {
+	introspection.FullType
+	Id     string
+	Fields []Field
 }
 
 type gqlBuilder struct {
-	types               []GQLType
+	types               []FullType
 	typeMap             map[string]int
 	processingFullTypes map[string]bool
 	scalarInterface     *types.Interface
 }
 
-func (g *gqlBuilder) GetFullType(name string) *introspection.FullType {
+func (g *gqlBuilder) GetFullType(name string) *FullType {
 	index, ok := g.typeMap[name]
 	if !ok {
 		return nil
 	}
-	return &g.types[index].Typ
+	return &g.types[index]
 }
 
 func (g *gqlBuilder) GetTypeRef(name string) *introspection.TypeRef {
@@ -47,15 +54,15 @@ func (g *gqlBuilder) GetTypeRef(name string) *introspection.TypeRef {
 	return nil
 }
 
-func (g *gqlBuilder) AddFullType(id string, typ introspection.FullType) error {
+func (g *gqlBuilder) AddFullType(typ FullType) error {
 	if pos, ok := g.typeMap[typ.Name]; ok {
-		if g.types[pos].Id != id {
-			return fmt.Errorf("Same type %s exists with different id (%s)", id, g.types[pos].Id)
+		if g.types[pos].Id != typ.Id {
+			return fmt.Errorf("Same type %s exists with different id (%s)", typ.Id, g.types[pos].Id)
 		}
 		return nil
 	}
 
-	g.types = append(g.types, GQLType{id, typ})
+	g.types = append(g.types, typ)
 	g.typeMap[typ.Name] = len(g.types) - 1
 
 	return nil
@@ -93,11 +100,12 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		g.processingFullTypes[id] = true
 
 		if types.Implements(t, g.scalarInterface) {
-			fullType := introspection.NewFullType()
+			fullType := FullType{}
+			fullType.Id = id
 			fullType.Kind = introspection.SCALAR
 			fullType.Name = name
 
-			g.AddFullType(id, fullType)
+			g.AddFullType(fullType)
 			return nonNilAbleTypeRef(&introspection.TypeRef{
 				Kind: introspection.SCALAR,
 				Name: &name,
@@ -130,7 +138,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			return g.ImportType(t)
 		}
 
-		var fields []introspection.Field
+		var fields []Field
 		for i := 0; i < strct.NumFields(); i++ {
 			typeField := strct.Field(i)
 
@@ -139,7 +147,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			}
 
 			fieldName := typeField.Name()
-			field := introspection.NewField()
+			field := Field{}
 			field.Name = fieldName
 			// TODO field.Description
 
@@ -169,8 +177,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			methodSig := method.Type().(*types.Signature)
 
 			fieldName := method.Name()
-			field := introspection.NewField()
+			field := Field{}
 			field.Name = fieldName
+			field.IsMethod = true
 			// TODO field.Description
 
 			params := methodSig.Params()
@@ -215,12 +224,12 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			switch methodResults.Len() {
 			case 0:
 				return nil, fmt.Errorf("resolvers must return at least one result")
-			// TODO case 1: // we need let field know if it has only one result somhow
-			// maybe we have to use somthing else instead if introspection
+			case 1:
 			case 2:
 				if secTyp, ok := methodResults.At(1).Type().(*types.Named); !ok || secTyp.Obj().Id() != "_.error" {
 					return nil, fmt.Errorf("second resolvers result must be an error")
 				}
+				field.HasError = true
 			default:
 				return nil, fmt.Errorf("resolvers must have exactly two results and second one should be an error")
 			}
@@ -242,13 +251,14 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			return nil, fmt.Errorf("Named structs must have at aleast one exported property")
 		}
 
-		fullType := introspection.NewFullType()
+		fullType := FullType{}
+		fullType.Id = id
 		fullType.Kind = kind
 		fullType.Name = name
 		// TODO fullType.Description
 		fullType.Fields = fields
 
-		g.AddFullType(id, fullType)
+		g.AddFullType(fullType)
 		return nonNilAbleTypeRef(&introspection.TypeRef{
 			Kind: kind,
 			Name: &name,
@@ -291,7 +301,7 @@ scalar {{$t.Name}}
 	t := template.Must(template.New("sdl").Funcs(funcMap).Parse(sdl))
 
 	type Data struct {
-		Types []introspection.FullType
+		Types []FullType
 	}
 	d := Data{g.FullTypes()}
 
@@ -303,11 +313,8 @@ scalar {{$t.Name}}
 	return ""
 }
 
-func (g *gqlBuilder) FullTypes() (types []introspection.FullType) {
-	for _, t := range g.types {
-		types = append(types, t.Typ)
-	}
-	return
+func (g *gqlBuilder) FullTypes() (types []FullType) {
+	return g.types
 }
 
 func NewGQLBuilder() *gqlBuilder {
