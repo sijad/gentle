@@ -1,5 +1,9 @@
 package basic
 
+import (
+	"time"
+)
+
 type AA struct {
 	A  []int  // [Int!]!
 	B  []bool // [Boolean!]!
@@ -36,4 +40,31 @@ func (ms *MyStruct) II(args IArgsInput) *MyStruct {
 
 func (ms *MyStruct) III(args IArgsInput) MyStruct {
 	return MyStruct{}
+}
+
+type MyTime time.Time
+
+func (t MyTime) MarshalGQL() ([]byte, error) {
+	return nil, nil
+}
+
+func (t MyTime) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+type KeyValue map[string]string
+
+func (t KeyValue) MarshalGQL() ([]byte, error) {
+	return nil, nil
+}
+
+func (t KeyValue) UnmarshalGQL(v interface{}) error {
+	return nil
+}
+
+type UInt uint
+
+type MyScalars struct {
+	Time  MyTime
+	MyInt UInt
 }

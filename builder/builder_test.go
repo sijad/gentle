@@ -48,12 +48,11 @@ func TestVarType(t *testing.T) {
 
 	schema.Types = []introspection.FullType(types)
 	generator.Data = &introspection.Data{Schema: schema}
-	js, err := json.Marshal(generator)
+	json.Marshal(generator)
 
 	if err != nil {
 		t.Error(err)
 	}
 
 	fmt.Println(builder.SDL())
-	fmt.Println(string(js))
 }

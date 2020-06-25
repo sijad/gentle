@@ -5,10 +5,15 @@ import (
 	"go/types"
 	"log"
 	"os"
+	"reflect"
 	"text/template"
 
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
+	"github.com/sijad/gentle"
+	"golang.org/x/tools/go/packages"
 )
+
+var scalarInterface = reflect.TypeOf(struct{ gentle.Scalar }{}).Field(0).Type
 
 type GQLType struct {
 	Id  string
@@ -19,6 +24,7 @@ type gqlBuilder struct {
 	types               []GQLType
 	typeMap             map[string]int
 	processingFullTypes map[string]bool
+	scalarInterface     *types.Interface
 }
 
 func (g *gqlBuilder) GetFullType(name string) *introspection.FullType {
@@ -79,8 +85,23 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 	case *types.Named:
 		name := x.Obj().Name()
 		id := x.Obj().Id()
-		strct := x.Underlying().(*types.Struct)
 		g.processingFullTypes[id] = true
+
+		if types.Implements(t, g.scalarInterface) {
+			fullType := introspection.NewFullType()
+			fullType.Kind = introspection.SCALAR
+			fullType.Name = name
+
+			g.AddFullType(id, fullType)
+			return nilAbleTypeRef(&introspection.TypeRef{
+				Kind: introspection.SCALAR,
+				Name: &name,
+			}, nilAble), nil
+		}
+		strct, ok := x.Underlying().(*types.Struct)
+		if !ok {
+			return nil, fmt.Errorf("only named structs are supported")
+		}
 
 		// returns underlying element type and prevents infinite loop
 		underlingType := func(t types.Type) (*introspection.TypeRef, error) {
@@ -193,19 +214,14 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 
 		g.AddFullType(id, fullType)
 		return nilAbleTypeRef(&introspection.TypeRef{
-			Kind: introspection.SCALAR,
+			Kind: introspection.OBJECT,
 			Name: &name,
 		}, nilAble), nil
+	case *types.Interface:
+		return nil, fmt.Errorf("not implimented")
 	default:
 		return nil, fmt.Errorf("not implimented")
 	}
-}
-
-func (g *gqlBuilder) ImportQueryType(typ types.Type) error {
-	_, err := g.ImportType(typ, false)
-	// g.schema.QueryType = &introspection.TypeName{string(name)}
-	// TODO check if imported type is object, panic if not
-	return err
 }
 
 func (g *gqlBuilder) SDL() string {
@@ -248,9 +264,20 @@ type {{$t.Name}} {
 	return ""
 }
 
+func (g *gqlBuilder) FullTypes() (types []introspection.FullType) {
+	for _, t := range g.types {
+		types = append(types, t.Typ)
+	}
+	return
+}
+
 func NewGQLBuilder() *gqlBuilder {
 	b := &gqlBuilder{}
 	b.typeMap = make(map[string]int)
 	b.processingFullTypes = make(map[string]bool)
+
+	pkgs, _ := packages.Load(&packages.Config{Mode: packages.LoadSyntax}, scalarInterface.PkgPath())
+	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)
+
 	return b
 }

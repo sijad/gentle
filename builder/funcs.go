@@ -47,7 +47,7 @@ func gqlType(typ *introspection.TypeRef) string {
 		return "[" + gqlType(typ.OfType) + "]"
 	case introspection.NONNULL:
 		return gqlType(typ.OfType) + "!"
-	case introspection.SCALAR:
+	case introspection.SCALAR, introspection.INPUTOBJECT, introspection.OBJECT:
 		return *typ.Name
 	default:
 		panic("not implimented")
