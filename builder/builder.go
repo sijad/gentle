@@ -195,12 +195,28 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 				// TODO add needed injectables
 			}
 
+			methodResults := methodSig.Results()
+
+			switch methodResults.Len() {
+			case 0:
+				return nil, fmt.Errorf("resolvers must return at least one result")
+			case 1:
+			case 2:
+				if secTyp, ok := methodResults.At(1).Type().(*types.Named); !ok || secTyp.Obj().Id() != "_.error" {
+					return nil, fmt.Errorf("second resolvers result must be an error")
+				}
+			default:
+				return nil, fmt.Errorf("resolvers can not have more that two results")
+			}
+
 			var rtyp *introspection.TypeRef
-			resultTyp := methodSig.Results().At(0)
+			resultTyp := methodResults.At(0)
 			rtyp, err := underlingType(resultTyp.Type())
 			if err != nil {
 				return nil, err
 			}
+
+			// TODO let field knows if it returs error
 
 			field.Type = *rtyp
 			fields = append(fields, field)

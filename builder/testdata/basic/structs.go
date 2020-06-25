@@ -34,8 +34,8 @@ func (ms *MyStruct) I(args IArgsInput) []string {
 	return []string{"I"}
 }
 
-func (ms *MyStruct) II(args IArgsInput) *MyStruct {
-	return nil
+func (ms *MyStruct) II(args IArgsInput) (*MyStruct, error) {
+	return nil, nil
 }
 
 func (ms *MyStruct) III(args IArgsInput) MyStruct {
