@@ -206,6 +206,10 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 			fields = append(fields, field)
 		}
 
+		if len(fields) == 0 {
+			return nil, fmt.Errorf("Named structs must have at aleast one exported property")
+		}
+
 		fullType := introspection.NewFullType()
 		fullType.Kind = introspection.OBJECT
 		fullType.Name = name
