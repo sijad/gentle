@@ -61,28 +61,32 @@ func (g *gqlBuilder) AddFullType(id string, typ introspection.FullType) error {
 	return nil
 }
 
-func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.TypeRef, error) {
+func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 	switch x := t.(type) {
 	case *types.Basic:
 		name := basicTypeName(x.Kind())
-		return nilAbleTypeRef(&introspection.TypeRef{
+		return nonNilAbleTypeRef(&introspection.TypeRef{
 			Kind: introspection.SCALAR,
 			Name: &name,
-		}, nilAble), nil
+		}), nil
 	case *types.Slice:
-		ofType, err := g.ImportType(x.Elem(), false)
+		ofType, err := g.ImportType(x.Elem())
 		if err != nil {
 			return nil, err
 		}
-		return nilAbleTypeRef(&introspection.TypeRef{
+		return nonNilAbleTypeRef(&introspection.TypeRef{
 			Kind:   introspection.LIST,
 			OfType: ofType,
-		}, nilAble), nil
+		}), nil
 	case *types.Pointer:
-		if nilAble {
+		if _, ok := x.Elem().(*types.Pointer); ok {
 			return nil, fmt.Errorf("Multiple indirection (*pointer) is not supported")
 		}
-		return g.ImportType(x.Elem(), true)
+		if ref, err := g.ImportType(x.Elem()); err != nil {
+			return nil, err
+		} else {
+			return ref.OfType, nil
+		}
 	case *types.Named:
 		name := x.Obj().Name()
 		id := x.Obj().Id()
@@ -94,10 +98,10 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 			fullType.Name = name
 
 			g.AddFullType(id, fullType)
-			return nilAbleTypeRef(&introspection.TypeRef{
+			return nonNilAbleTypeRef(&introspection.TypeRef{
 				Kind: introspection.SCALAR,
 				Name: &name,
-			}, nilAble), nil
+			}), nil
 		}
 		strct, ok := x.Underlying().(*types.Struct)
 		if !ok {
@@ -123,7 +127,7 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 				}
 			}
 
-			return g.ImportType(typ, false)
+			return g.ImportType(t)
 		}
 
 		var fields []introspection.Field
@@ -245,10 +249,10 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 		fullType.Fields = fields
 
 		g.AddFullType(id, fullType)
-		return nilAbleTypeRef(&introspection.TypeRef{
+		return nonNilAbleTypeRef(&introspection.TypeRef{
 			Kind: kind,
 			Name: &name,
-		}, nilAble), nil
+		}), nil
 	default:
 		return nil, fmt.Errorf("not implimented")
 	}

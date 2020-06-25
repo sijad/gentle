@@ -33,7 +33,7 @@ func TestVarType(t *testing.T) {
 				continue
 			}
 
-			if _, err := builder.ImportType(typeName.Type(), false); err != nil {
+			if _, err := builder.ImportType(typeName.Type()); err != nil {
 				t.Error(err)
 			}
 		}
@@ -55,4 +55,5 @@ func TestVarType(t *testing.T) {
 	}
 
 	fmt.Println(builder.SDL())
+	fmt.Println(builder.Code())
 }

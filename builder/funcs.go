@@ -30,11 +30,7 @@ func basicTypeName(b types.BasicKind) string {
 	}
 }
 
-func nilAbleTypeRef(typ *introspection.TypeRef, nilAble bool) *introspection.TypeRef {
-	if nilAble {
-		return typ
-	}
-
+func nonNilAbleTypeRef(typ *introspection.TypeRef) *introspection.TypeRef {
 	return &introspection.TypeRef{
 		Kind:   introspection.NONNULL,
 		OfType: typ,
