@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/dave/jennifer/jen"
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 	"github.com/sijad/gentle"
 	"golang.org/x/tools/go/packages"
@@ -24,8 +25,9 @@ type Field struct {
 
 type FullType struct {
 	introspection.FullType
-	Id     string
-	Fields []Field
+	Id      string
+	PkgPath string
+	Fields  []Field
 }
 
 type gqlBuilder struct {
@@ -96,12 +98,14 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		}
 	case *types.Named:
 		name := x.Obj().Name()
-		id := x.Obj().Id()
+		pkgPath := x.Obj().Pkg().Path()
+		id := pkgPath + x.Obj().Id()
 		g.processingFullTypes[id] = true
 
 		if types.Implements(t, g.scalarInterface) {
 			fullType := FullType{}
 			fullType.Id = id
+			fullType.PkgPath = pkgPath
 			fullType.Kind = introspection.SCALAR
 			fullType.Name = name
 
@@ -127,7 +131,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 				if ref := g.GetTypeRef(typ.Obj().Name()); ref != nil {
 					return ref, nil
 				}
-				if g.processingFullTypes[typ.Obj().Id()] {
+				if g.processingFullTypes[typ.Obj().Pkg().Path()+typ.Obj().Id()] {
 					return &introspection.TypeRef{
 						Kind: introspection.SCALAR,
 						Name: &name,
@@ -253,6 +257,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 
 		fullType := FullType{}
 		fullType.Id = id
+		fullType.PkgPath = pkgPath
 		fullType.Kind = kind
 		fullType.Name = name
 		// TODO fullType.Description
@@ -315,6 +320,51 @@ scalar {{$t.Name}}
 
 func (g *gqlBuilder) FullTypes() (types []FullType) {
 	return g.types
+}
+
+func (g *gqlBuilder) Code() string {
+	gen := jen.NewFile("generated")
+
+	// TODO changing maps key to int might improve performace
+	// gen.Func().
+	// 	Id("hashId").
+	// 	Params(jen.Id("s").String()).
+	// 	Block(
+	// 		jen.Id("h").Op(":=").Qual("hash/fnv", "New32a").Call(),
+	// 		jen.Id("h").Dot("Write").Call(jen.Index().Byte().Call(jen.Id("s"))),
+	// 		jen.Return(jen.Id("h").Dot("Sum32").Call()),
+	// 	)
+
+	resolverMapParams := []jen.Code{
+		jen.Id("root").Interface(),
+		jen.Id("args").Map(jen.String()).Interface(),
+	}
+	for _, ftyp := range g.FullTypes() {
+		switch ftyp.Kind {
+		case introspection.OBJECT:
+			gen.Var().
+				Id(ftyp.Name + "Map").
+				Op("=").
+				Map(jen.String()).
+				Func().
+				Params(resolverMapParams...).
+				Parens(jen.List(jen.Interface(), jen.Error())).
+				Values(jen.DictFunc(func(d jen.Dict) {
+					rootId := jen.Id("root").Dot("").Parens(jen.Op("*").Qual(ftyp.PkgPath, ftyp.Name))
+					for _, field := range ftyp.Fields {
+						d[jen.Lit(field.Name)] = jen.Func().
+							Params(resolverMapParams...).
+							Parens(jen.List(jen.Interface(), jen.Error())).
+							BlockFunc(func(g *jen.Group) {
+								if field.IsMethod {
+									g.Return(rootId)
+								}
+							})
+					}
+				}))
+		}
+	}
+	return fmt.Sprintf("%#v", gen)
 }
 
 func NewGQLBuilder() *gqlBuilder {
