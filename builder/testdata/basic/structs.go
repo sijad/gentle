@@ -30,16 +30,16 @@ type IArgsInput struct {
 	H *[]*[]*[]*int // [[[Int]]]
 }
 
-func (ms *MyStruct) I(args IArgsInput) []string {
-	return []string{"I"}
+func (ms *MyStruct) I(args IArgsInput) ([]string, error) {
+	return []string{"I"}, nil
 }
 
 func (ms *MyStruct) II(args IArgsInput) (*MyStruct, error) {
 	return nil, nil
 }
 
-func (ms *MyStruct) III(args IArgsInput) MyStruct {
-	return MyStruct{}
+func (ms *MyStruct) III(args IArgsInput) (MyStruct, error) {
+	return MyStruct{}, nil
 }
 
 type MyTime time.Time

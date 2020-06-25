@@ -200,8 +200,10 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 							// TODO Description: "",
 						})
 					}
+				} else {
+					// TODO add needed injectables
+					panic("injectables are not implimented yet")
 				}
-				// TODO add needed injectables
 			}
 
 			methodResults := methodSig.Results()
@@ -209,13 +211,14 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 			switch methodResults.Len() {
 			case 0:
 				return nil, fmt.Errorf("resolvers must return at least one result")
-			case 1:
+			// TODO case 1: // we need let field know if it has only one result somhow
+			// maybe we have to use somthing else instead if introspection
 			case 2:
 				if secTyp, ok := methodResults.At(1).Type().(*types.Named); !ok || secTyp.Obj().Id() != "_.error" {
 					return nil, fmt.Errorf("second resolvers result must be an error")
 				}
 			default:
-				return nil, fmt.Errorf("resolvers can not have more that two results")
+				return nil, fmt.Errorf("resolvers must have exactly two results and second one should be an error")
 			}
 
 			var rtyp *introspection.TypeRef
@@ -246,8 +249,6 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 			Kind: kind,
 			Name: &name,
 		}, nilAble), nil
-	case *types.Interface:
-		return nil, fmt.Errorf("not implimented")
 	default:
 		return nil, fmt.Errorf("not implimented")
 	}
