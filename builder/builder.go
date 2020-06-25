@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"text/template"
 
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
@@ -146,11 +147,19 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 			fields = append(fields, field)
 		}
 
+		kind := introspection.OBJECT
+		if strings.HasSuffix(name, "Input") {
+			kind = introspection.INPUTOBJECT
+		}
 		for i := 0; i < x.NumMethods(); i++ {
 			method := x.Method(i)
 
 			if !method.Exported() {
 				continue
+			}
+
+			if kind == introspection.INPUTOBJECT {
+				return nil, fmt.Errorf("Input types can not have resolvers")
 			}
 
 			methodSig := method.Type().(*types.Signature)
@@ -227,14 +236,14 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 		}
 
 		fullType := introspection.NewFullType()
-		fullType.Kind = introspection.OBJECT
+		fullType.Kind = kind
 		fullType.Name = name
 		// TODO fullType.Description
 		fullType.Fields = fields
 
 		g.AddFullType(id, fullType)
 		return nilAbleTypeRef(&introspection.TypeRef{
-			Kind: introspection.OBJECT,
+			Kind: kind,
 			Name: &name,
 		}, nilAble), nil
 	case *types.Interface:
@@ -250,7 +259,7 @@ func (g *gqlBuilder) SDL() string {
 {{- if eq $t.Kind 0 -}}
 scalar {{$t.Name}}
 {{- end}}
-{{- if eq $t.Kind 3 -}}
+{{- if or (eq $t.Kind 3) (eq $t.Kind 7) -}}
 {{if eq $t.Kind 3}}type{{else}}input{{end}} {{$t.Name}} {
 {{- range $f := $t.Fields}}
   {{$f.Name | lowerFirstRune}}
@@ -266,6 +275,7 @@ scalar {{$t.Name}}
 {{- end}}
 }
 {{- end}}
+
 {{end -}}
 `
 	funcMap := template.FuncMap{
