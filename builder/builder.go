@@ -247,7 +247,11 @@ func (g *gqlBuilder) ImportType(t types.Type, nilAble bool) (*introspection.Type
 func (g *gqlBuilder) SDL() string {
 	const sdl = `
 {{- range $t := .Types -}}
-type {{$t.Name}} {
+{{- if eq $t.Kind 0 -}}
+scalar {{$t.Name}}
+{{- end}}
+{{- if eq $t.Kind 3 -}}
+{{if eq $t.Kind 3}}type{{else}}input{{end}} {{$t.Name}} {
 {{- range $f := $t.Fields}}
   {{$f.Name | lowerFirstRune}}
   {{- if gt (len $f.Args) 0 -}}
@@ -261,7 +265,7 @@ type {{$t.Name}} {
   : {{$f.Type | gqlType}}
 {{- end}}
 }
-
+{{- end}}
 {{end -}}
 `
 	funcMap := template.FuncMap{
