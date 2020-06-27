@@ -96,7 +96,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 	case *types.Named:
 		name := x.Obj().Name()
 		pkgPath := x.Obj().Pkg().Path()
-		id := pkgPath + x.Obj().Id()
+		id := x.String()
 		g.processingFullTypes[id] = true
 
 		if types.Implements(t, g.scalarInterface) {
@@ -128,7 +128,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 				if ref := g.GetTypeRef(typ.Obj().Name()); ref != nil {
 					return ref, nil
 				}
-				if g.processingFullTypes[typ.Obj().Pkg().Path()+typ.Obj().Id()] {
+				if g.processingFullTypes[typ.String()] {
 					return &introspection.TypeRef{
 						Kind: introspection.SCALAR,
 						Name: &name,
