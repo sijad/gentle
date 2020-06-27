@@ -3,13 +3,9 @@ package builder
 import (
 	"fmt"
 	"go/types"
-	"log"
-	"os"
 	"reflect"
 	"strings"
-	"text/template"
 
-	"github.com/dave/jennifer/jen"
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 	"github.com/sijad/gentle"
 	"golang.org/x/tools/go/packages"
@@ -21,6 +17,7 @@ type Field struct {
 	introspection.Field
 	IsMethod bool
 	HasError bool
+	Params   []*types.Var
 }
 
 type FullType struct {
@@ -217,10 +214,8 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 							// TODO Description: "",
 						})
 					}
-				} else {
-					// TODO add needed injectables
-					panic("injectables are not implimented yet")
 				}
+				field.Params = append(field.Params, param)
 			}
 
 			methodResults := methodSig.Results()
@@ -273,98 +268,8 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 	}
 }
 
-func (g *gqlBuilder) SDL() string {
-	const sdl = `
-{{- range $t := .Types -}}
-{{- if eq $t.Kind 0 -}}
-scalar {{$t.Name}}
-{{- end}}
-{{- if or (eq $t.Kind 3) (eq $t.Kind 7) -}}
-{{if eq $t.Kind 3}}type{{else}}input{{end}} {{$t.Name}} {
-{{- range $f := $t.Fields}}
-  {{$f.Name | lowerFirstRune}}
-  {{- if gt (len $f.Args) 0 -}}
-    (
-      {{- range $i, $a := $f.Args}}
-        {{- if $i}}{{", "}}{{end -}}
-        {{- $a.Name | lowerFirstRune }}: {{$a.Type | gqlType -}}
-      {{ end -}}
-    )
-  {{- end -}}
-  : {{$f.Type | gqlType}}
-{{- end}}
-}
-{{- end}}
-
-{{end -}}
-`
-	funcMap := template.FuncMap{
-		"gqlType":        gqlType,
-		"lowerFirstRune": lowerFirstRune,
-	}
-
-	t := template.Must(template.New("sdl").Funcs(funcMap).Parse(sdl))
-
-	type Data struct {
-		Types []FullType
-	}
-	d := Data{g.FullTypes()}
-
-	err := t.Execute(os.Stdout, d)
-	if err != nil {
-		log.Println("executing template:", err)
-	}
-
-	return ""
-}
-
 func (g *gqlBuilder) FullTypes() (types []FullType) {
 	return g.types
-}
-
-func (g *gqlBuilder) Code() string {
-	gen := jen.NewFile("generated")
-
-	// TODO changing maps key to int might improve performace
-	// gen.Func().
-	// 	Id("hashId").
-	// 	Params(jen.Id("s").String()).
-	// 	Block(
-	// 		jen.Id("h").Op(":=").Qual("hash/fnv", "New32a").Call(),
-	// 		jen.Id("h").Dot("Write").Call(jen.Index().Byte().Call(jen.Id("s"))),
-	// 		jen.Return(jen.Id("h").Dot("Sum32").Call()),
-	// 	)
-
-	resolverMapParams := []jen.Code{
-		jen.Id("root").Interface(),
-		jen.Id("args").Map(jen.String()).Interface(),
-	}
-	for _, ftyp := range g.FullTypes() {
-		switch ftyp.Kind {
-		case introspection.OBJECT:
-			gen.Var().
-				Id(ftyp.Name + "Map").
-				Op("=").
-				Map(jen.String()).
-				Func().
-				Params(resolverMapParams...).
-				Parens(jen.List(jen.Interface(), jen.Error())).
-				Values(jen.DictFunc(func(d jen.Dict) {
-					rootId := jen.Id("root").Dot("").Parens(jen.Op("*").Qual(ftyp.PkgPath, ftyp.Name))
-					for _, field := range ftyp.Fields {
-						d[jen.Lit(field.Name)] = jen.Func().
-							Params(resolverMapParams...).
-							Parens(jen.List(jen.Interface(), jen.Error())).
-							BlockFunc(func(g *jen.Group) {
-								if field.IsMethod {
-									g.Return(rootId)
-								}
-							})
-					}
-				}))
-		}
-	}
-	return fmt.Sprintf("%#v", gen)
 }
 
 func NewGQLBuilder() *gqlBuilder {

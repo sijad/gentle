@@ -3,10 +3,58 @@ package builder
 import (
 	"fmt"
 	"go/types"
+	"log"
+	"os"
+	"text/template"
 	"unicode"
 
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 )
+
+func (g *gqlBuilder) SDL() string {
+	const sdl = `
+{{- range $t := .Types -}}
+{{- if eq $t.Kind 0 -}}
+scalar {{$t.Name}}
+{{- end}}
+{{- if or (eq $t.Kind 3) (eq $t.Kind 7) -}}
+{{if eq $t.Kind 3}}type{{else}}input{{end}} {{$t.Name}} {
+{{- range $f := $t.Fields}}
+  {{$f.Name | lowerFirstRune}}
+  {{- if gt (len $f.Args) 0 -}}
+    (
+      {{- range $i, $a := $f.Args}}
+        {{- if $i}}{{", "}}{{end -}}
+        {{- $a.Name | lowerFirstRune }}: {{$a.Type | gqlType -}}
+      {{ end -}}
+    )
+  {{- end -}}
+  : {{$f.Type | gqlType}}
+{{- end}}
+}
+{{- end}}
+
+{{end -}}
+`
+	funcMap := template.FuncMap{
+		"gqlType":        gqlType,
+		"lowerFirstRune": lowerFirstRune,
+	}
+
+	t := template.Must(template.New("sdl").Funcs(funcMap).Parse(sdl))
+
+	type Data struct {
+		Types []FullType
+	}
+	d := Data{g.FullTypes()}
+
+	err := t.Execute(os.Stdout, d)
+	if err != nil {
+		log.Println("executing template:", err)
+	}
+
+	return ""
+}
 
 func lowerFirstRune(s string) string {
 	r := []rune(s)
