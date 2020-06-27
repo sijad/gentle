@@ -1,6 +1,7 @@
 package basic
 
 import (
+	"context"
 	"time"
 )
 
@@ -8,6 +9,10 @@ type AA struct {
 	A  []int  // [Int!]!
 	B  []bool // [Boolean!]!
 	Aa *AA    // AA
+}
+
+func (aa AA) AA(args IArgsInput) AA {
+	return aa
 }
 
 type MyStruct struct {
@@ -38,7 +43,7 @@ func (ms *MyStruct) II(args IArgsInput) (*MyStruct, error) {
 	return nil, nil
 }
 
-func (ms *MyStruct) III(args IArgsInput) (MyStruct, error) {
+func (ms *MyStruct) III(ctx context.Context, args IArgsInput) (MyStruct, error) {
 	return MyStruct{}, nil
 }
 

@@ -120,19 +120,22 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		// returns underlying element type and prevents infinite loop
 		underlingType := func(t types.Type) (*introspection.TypeRef, error) {
 			typ := t
+			isPtr := false
 			if ptr, ok := typ.(*types.Pointer); ok {
+				isPtr = true
 				typ = ptr.Elem()
 			}
 
 			if typ, ok := typ.(*types.Named); ok {
-				if ref := g.GetTypeRef(typ.Obj().Name()); ref != nil {
-					return ref, nil
-				}
 				if g.processingFullTypes[typ.String()] {
-					return &introspection.TypeRef{
+					ref := &introspection.TypeRef{
 						Kind: introspection.SCALAR,
 						Name: &name,
-					}, nil
+					}
+					if isPtr {
+						return ref, nil
+					}
+					return nonNilAbleTypeRef(ref), nil
 				}
 			}
 
@@ -233,12 +236,12 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 				return nil, fmt.Errorf("resolvers must have exactly two results and second one should be an error")
 			}
 
-			var rtyp *introspection.TypeRef
 			resultTyp := methodResults.At(0)
 			rtyp, err := underlingType(resultTyp.Type())
 			if err != nil {
 				return nil, err
 			}
+			fmt.Println(rtyp)
 
 			// TODO let field knows if it returs error
 
