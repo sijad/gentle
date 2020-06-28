@@ -39,7 +39,7 @@ func (ms *MyStruct) I(args IArgsInput) ([]string, error) {
 	return []string{"I"}, nil
 }
 
-func (ms *MyStruct) II(args IArgsInput) (*MyStruct, error) {
+func (ms *MyStruct) II(args struct{ Name string }) (*MyStruct, error) {
 	return nil, nil
 }
 
