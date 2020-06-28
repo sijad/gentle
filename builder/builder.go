@@ -22,9 +22,9 @@ type Field struct {
 
 type FullType struct {
 	introspection.FullType
-	Id      string
-	PkgPath string
-	Fields  []Field
+	Id     string
+	Type   *types.Named
+	Fields []Field
 }
 
 type gqlBuilder struct {
@@ -95,17 +95,16 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		}
 	case *types.Named:
 		name := x.Obj().Name()
-		pkgPath := x.Obj().Pkg().Path()
 		id := x.String()
 		g.processingFullTypes[id] = true
 
-		if types.Implements(t, g.scalarInterface) {
-			fullType := FullType{}
-			fullType.Id = id
-			fullType.PkgPath = pkgPath
-			fullType.Kind = introspection.SCALAR
-			fullType.Name = name
+		fullType := FullType{}
+		fullType.Id = id
+		fullType.Type = x
+		fullType.Name = name
 
+		if types.Implements(t, g.scalarInterface) {
+			fullType.Kind = introspection.SCALAR
 			g.AddFullType(fullType)
 			return nonNilAbleTypeRef(&introspection.TypeRef{
 				Kind: introspection.SCALAR,
@@ -252,11 +251,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			return nil, fmt.Errorf("Named structs must have at aleast one exported property")
 		}
 
-		fullType := FullType{}
-		fullType.Id = id
-		fullType.PkgPath = pkgPath
 		fullType.Kind = kind
-		fullType.Name = name
 		// TODO fullType.Description
 		fullType.Fields = fields
 
