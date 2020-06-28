@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"go/types"
+	"os"
 	"testing"
 
 	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
@@ -40,6 +41,6 @@ func TestVarType(t *testing.T) {
 	schema := introspection.NewSchema()
 	schema.QueryType = &introspection.TypeName{Name: "MyStruct"}
 
-	fmt.Println(builder.SDL())
+	fmt.Println(builder.SDL(os.Stdout))
 	fmt.Println(builder.Code())
 }
