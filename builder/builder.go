@@ -241,7 +241,6 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println(rtyp)
 
 			// TODO let field knows if it returs error
 
@@ -284,4 +283,27 @@ func NewGQLBuilder() *gqlBuilder {
 	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)
 
 	return b
+}
+
+func basicTypeName(b types.BasicKind) string {
+	switch b {
+	case types.Bool:
+		return "Boolean"
+	case types.Int, types.Int8, types.Int16, types.Int32, types.Int64,
+		types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64:
+		return "Int"
+	case types.Float32, types.Float64:
+		return "Float"
+	case types.String:
+		return "String"
+	default:
+		panic(fmt.Sprintf("Cannot determine type of %T", b))
+	}
+}
+
+func nonNilAbleTypeRef(typ *introspection.TypeRef) *introspection.TypeRef {
+	return &introspection.TypeRef{
+		Kind:   introspection.NONNULL,
+		OfType: typ,
+	}
 }
