@@ -1,99 +1,51 @@
 package builder
 
 import (
-	"fmt"
+	"bytes"
+	"go/format"
 	"go/types"
+	"io"
+	"text/template"
 
 	"github.com/dave/jennifer/jen"
-	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 )
 
-func (g *gqlBuilder) Code() string {
-	gen := jen.NewFile("generated")
+func (g *gqlBuilder) Code(w io.Writer) error {
+	t := template.Must(template.New("code.tmpl").Funcs(funcMap).ParseFiles("code.tmpl"))
 
-	// TODO changing maps key to int might improve performace
-	// gen.Func().
-	// 	Id("hashId").
-	// 	Params(jen.Id("s").String()).
-	// 	Block(
-	// 		jen.Id("h").Op(":=").Qual("hash/fnv", "New32a").Call(),
-	// 		jen.Id("h").Dot("Write").Call(jen.Index().Byte().Call(jen.Id("s"))),
-	// 		jen.Return(jen.Id("h").Dot("Sum32").Call()),
-	// 	)
-
-	gen.Type().Id("InputArgs").Map(jen.String()).Interface()
-	gen.Type().Id("DependencyInjection").Map(jen.String()).Interface()
-
-	resolverMapParams := []jen.Code{
-		jen.Id("root").Interface(),
-		jen.Id("args").Op("InputArgs"),
-		jen.Id("di").Op("DependencyInjection"),
+	type Data struct {
+		PackageName         string
+		Imports             []string
+		Types               []FullType
+		Dependencies        map[string]*types.Var
+		DependenciesNameMap map[string]string
 	}
-	for _, ftyp := range g.FullTypes() {
-		switch ftyp.Kind {
-		case introspection.OBJECT:
-			gen.Var().
-				Id(ftyp.Name + "Map").
-				Op("=").
-				Map(jen.String()).
-				Func().
-				Params(resolverMapParams...).
-				Parens(jen.List(jen.Interface(), jen.Error())).
-				Values(jen.DictFunc(func(d jen.Dict) {
-					rootId := jen.Id("root").Assert(jen.Op("*").Qual(ftyp.PkgPath, ftyp.Name))
-					for _, field := range ftyp.Fields {
-						d[jen.Lit(field.Name)] = jen.Func().
-							Params(resolverMapParams...).
-							Parens(jen.List(jen.Interface(), jen.Error())).
-							BlockFunc(func(g *jen.Group) {
-								if field.IsMethod {
-									g.Return(rootId.Clone().Dot(field.Name).Call(jen.ListFunc(func(g *jen.Group) {
-										for _, param := range field.Params {
-											name := param.Name()
-											typ := param.Type()
-											if name == "args" {
-												var argsStruct *types.Struct
-												switch xx := typ.(type) {
-												case *types.Named:
-													argsStruct = xx.Underlying().(*types.Struct)
-												case *types.Struct:
-													argsStruct = xx
-												default:
-													panic("args can only be struct")
-												}
-												typPkg, typName := typePath(typ)
-												var s *jen.Statement
-												if typPkg != "" {
-													s = g.Qual(typPkg, typName)
-												} else {
-													s = g.Id(typName)
-												}
-												s.Values(jen.DictFunc(func(d jen.Dict) {
-													for i := 0; i < argsStruct.NumFields(); i++ {
-														argField := argsStruct.Field(i)
 
-														if !argField.Exported() {
-															continue
-														}
-
-														argName := argField.Name()
-														d[jen.Id(argName)] = assertType("args", argName, argField.Type())
-													}
-												}))
-												continue
-											}
-											g.Add(assertType("di", typ.String(), typ))
-										}
-									})))
-								} else {
-									g.Return(jen.Nil(), jen.Nil())
-								}
-							})
-					}
-				}))
-		}
+	d := Data{
+		PackageName:         "generated",
+		Imports:             []string{"context"},
+		Dependencies:        g.dependencies,
+		DependenciesNameMap: g.dependenciesNameMap,
+		Types:               g.FullTypes(),
 	}
-	return fmt.Sprintf("%#v", gen)
+
+	source := &bytes.Buffer{}
+
+	if err := t.Execute(source, d); err != nil {
+		return err
+	}
+
+	formatted, err := format.Source(source.Bytes())
+	if err != nil {
+		w.Write(source.Bytes())
+		return err
+	}
+
+	if _, err := w.Write(formatted); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func assertType(id, index string, typ types.Type) jen.Code {

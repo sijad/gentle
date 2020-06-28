@@ -1,0 +1,40 @@
+{{- $root := . -}}
+package {{.PackageName}}
+
+import (
+{{- range $imp := .Imports}}
+	{{$imp | quote}}
+{{end -}}
+)
+
+{{if gt (len .Dependencies) 0 -}}
+	type Dependencies struct {
+		{{- range $dep := .Dependencies}}
+			{{$dep.Name | upperCaseFirst}} {{$dep.Type | typeGo}}
+		{{- end -}}
+	}
+{{- end}}
+
+{{range $type := .Types}}
+	{{- if eq $type.Kind 3 -}}
+		var {{$type.Name}}Map = map[string]func(root interface{}, args interface{}, di Dependencies) (interface{}, error){
+		{{- range $field := $type.Fields}}
+			{{$field.Name | quote}}: func(root interface{}, args InputArgs, di Dependencies) (interface{}, error) {
+			{{- if $field.IsMethod}}
+				return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
+					{{- range $param := $field.Params}}
+						{{if eq $param.Name "args" -}}
+							args.({{$param.Type | typeGo}}),
+						{{- else -}}
+							di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
+						{{- end -}}
+					{{- end}}
+				)
+			{{else}}
+				return nil, nil
+			{{end -}}
+			},
+		{{- end}}
+		}
+	{{end}}
+{{end}}

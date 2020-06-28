@@ -32,6 +32,8 @@ type gqlBuilder struct {
 	typeMap             map[string]int
 	processingFullTypes map[string]bool
 	scalarInterface     *types.Interface
+	dependencies        map[string]*types.Var
+	dependenciesNameMap map[string]string
 }
 
 func (g *gqlBuilder) GetFullType(name string) *FullType {
@@ -63,6 +65,22 @@ func (g *gqlBuilder) AddFullType(typ FullType) error {
 
 	g.types = append(g.types, typ)
 	g.typeMap[typ.Name] = len(g.types) - 1
+
+	return nil
+}
+
+func (g *gqlBuilder) AddDependency(dep *types.Var) error {
+	key := dep.Type().String()
+	depArgName := dep.Name()
+	if d, ok := g.dependencies[key]; ok {
+		depArgName = d.Name()
+	} else {
+		g.dependencies[key] = dep
+	}
+	g.dependenciesNameMap[dep.Name()] = depArgName
+
+	// TODO if a dependency with same name but different
+	// type exists return an error
 
 	return nil
 }
@@ -216,6 +234,8 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 							// TODO Description: "",
 						})
 					}
+				} else {
+					g.AddDependency(param)
 				}
 				field.Params = append(field.Params, param)
 			}
@@ -273,6 +293,8 @@ func NewGQLBuilder() *gqlBuilder {
 	b := &gqlBuilder{}
 	b.typeMap = make(map[string]int)
 	b.processingFullTypes = make(map[string]bool)
+	b.dependencies = make(map[string]*types.Var)
+	b.dependenciesNameMap = make(map[string]string)
 
 	pkgs, _ := packages.Load(&packages.Config{Mode: packages.LoadSyntax}, scalarInterface.PkgPath())
 	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)

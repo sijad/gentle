@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"go/types"
+	"strconv"
 	"text/template"
 	"unicode"
 
@@ -11,6 +13,8 @@ var funcMap = template.FuncMap{
 	"gqlType":        gqlType,
 	"lowerCaseFirst": lowerCaseFirst,
 	"upperCaseFirst": upperCaseFirst,
+	"quote":          strconv.Quote,
+	"typeGo":         typeGo,
 }
 
 func lowerCaseFirst(s string) string {
@@ -21,7 +25,7 @@ func lowerCaseFirst(s string) string {
 
 func upperCaseFirst(s string) string {
 	r := []rune(s)
-	r[0] = unicode.ToLower(r[0])
+	r[0] = unicode.ToUpper(r[0])
 	return string(r)
 }
 
@@ -35,5 +39,15 @@ func gqlType(typ *introspection.TypeRef) string {
 		return *typ.Name
 	default:
 		panic("not implimented")
+	}
+}
+
+func typeGo(typ types.Type) string {
+	switch x := typ.(type) {
+	case *types.Named:
+		obj := x.Obj()
+		return obj.Pkg().Name() + "." + obj.Name()
+	default:
+		return x.String()
 	}
 }

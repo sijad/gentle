@@ -35,7 +35,7 @@ type IArgsInput struct {
 	H *[]*[]*[]*int // [[[Int]]]
 }
 
-func (ms *MyStruct) I(args IArgsInput) ([]string, error) {
+func (ms *MyStruct) I(ctx2 context.Context, args IArgsInput) ([]string, error) {
 	return []string{"I"}, nil
 }
 
