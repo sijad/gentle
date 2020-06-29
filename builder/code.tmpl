@@ -33,7 +33,7 @@ import (
 							{{- end -}}
 						{{- end -}}
 					{{- end}}
-				)
+				){{- if not $field.HasError -}}, nil{{- end}}
 			{{else}}
 				return nil, nil
 			{{end -}}
