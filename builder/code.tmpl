@@ -20,26 +20,26 @@ import (
 		var {{$type.Name}}Map = map[string]func(ctx context.Context, root interface{}, args interface{}, di Dependencies) (interface{}, error){
 		{{- range $field := $type.Fields}}
 			{{$field.Name | quote}}: func(ctx context.Context, root interface{}, args InputArgs, di Dependencies) (interface{}, error) {
-			{{- if $field.IsMethod}}
-				{{- if $field.HasArgs -}}
-					args = nil // TODO
-				{{- end}}
-				return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
-					{{- range $param := $field.Params}}
-						{{if eq $param.Name "args" -}}
-							args,
-						{{- else -}}
-							{{if eq $param.Name "ctx" -}}
-								ctx,
-							{{- else -}}
-								di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
-							{{- end -}}
-						{{- end -}}
+				{{- if $field.IsMethod}}
+					{{- if $field.HasArgs -}}
+						args = nil // TODO
 					{{- end}}
-				){{- if not $field.HasError -}}, nil{{- end}}
-			{{else}}
-				return nil, nil
-			{{end -}}
+					return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
+						{{- range $param := $field.Params}}
+							{{if eq $param.Name "args" -}}
+								args,
+							{{- else -}}
+								{{if eq $param.Name "ctx" -}}
+									ctx,
+								{{- else -}}
+									di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
+								{{- end -}}
+							{{- end -}}
+						{{- end}}
+					){{- if not $field.HasError -}}, nil{{- end}}
+				{{else}}
+					return root.(*{{$type.Type | typeGo}}).{{$field.Name}}, nil
+				{{end -}}
 			},
 		{{- end}}
 		}
