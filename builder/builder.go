@@ -72,11 +72,20 @@ func (g *gqlBuilder) AddFullType(typ FullType) error {
 func (g *gqlBuilder) AddDependency(dep *types.Var) error {
 	key := dep.Type().String()
 	depArgName := dep.Name()
+
+	if key == "context.Context" {
+		if depArgName != "ctx" {
+			return fmt.Errorf("context.Context name input need to be ctx got %s", depArgName)
+		}
+		return nil
+	}
+
 	if d, ok := g.dependencies[key]; ok {
 		depArgName = d.Name()
 	} else {
 		g.dependencies[key] = dep
 	}
+
 	g.dependenciesNameMap[dep.Name()] = depArgName
 
 	// TODO if a dependency with same name but different
@@ -235,7 +244,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 						})
 					}
 				} else {
-					g.AddDependency(param)
+					if err := g.AddDependency(param); err != nil {
+						return nil, err
+					}
 				}
 				field.Params = append(field.Params, param)
 			}
@@ -260,8 +271,6 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			if err != nil {
 				return nil, err
 			}
-
-			// TODO let field knows if it returs error
 
 			field.Type = *rtyp
 			fields = append(fields, field)

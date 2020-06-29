@@ -17,16 +17,20 @@ import (
 
 {{range $type := .Types}}
 	{{- if eq $type.Kind 3 -}}
-		var {{$type.Name}}Map = map[string]func(root interface{}, args interface{}, di Dependencies) (interface{}, error){
+		var {{$type.Name}}Map = map[string]func(ctx context.Context, root interface{}, args interface{}, di Dependencies) (interface{}, error){
 		{{- range $field := $type.Fields}}
-			{{$field.Name | quote}}: func(root interface{}, args InputArgs, di Dependencies) (interface{}, error) {
+			{{$field.Name | quote}}: func(ctx context.Context, root interface{}, args InputArgs, di Dependencies) (interface{}, error) {
 			{{- if $field.IsMethod}}
 				return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
 					{{- range $param := $field.Params}}
 						{{if eq $param.Name "args" -}}
 							args.({{$param.Type | typeGo}}),
 						{{- else -}}
-							di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
+							{{if eq $param.Name "ctx" -}}
+								ctx,
+							{{- else -}}
+								di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
+							{{- end -}}
 						{{- end -}}
 					{{- end}}
 				)
