@@ -13,6 +13,8 @@ import (
 			{{$dep.Name | upperCaseFirst}} {{$dep.Type | typeGo}}
 		{{- end -}}
 	}
+{{- else -}}
+	type Dependencies interface{}
 {{- end}}
 
 {{range $type := .Types}}
