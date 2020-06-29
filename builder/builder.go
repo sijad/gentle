@@ -17,6 +17,7 @@ type Field struct {
 	introspection.Field
 	IsMethod bool
 	HasError bool
+	HasArgs  bool
 	Params   []*types.Var
 }
 
@@ -243,6 +244,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 							// TODO Description: "",
 						})
 					}
+					field.HasArgs = true
 				} else {
 					if err := g.AddDependency(param); err != nil {
 						return nil, err

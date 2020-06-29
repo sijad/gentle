@@ -21,10 +21,13 @@ import (
 		{{- range $field := $type.Fields}}
 			{{$field.Name | quote}}: func(ctx context.Context, root interface{}, args InputArgs, di Dependencies) (interface{}, error) {
 			{{- if $field.IsMethod}}
+				{{- if $field.HasArgs -}}
+					args = nil // TODO
+				{{- end}}
 				return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
 					{{- range $param := $field.Params}}
 						{{if eq $param.Name "args" -}}
-							args.({{$param.Type | typeGo}}),
+							args,
 						{{- else -}}
 							{{if eq $param.Name "ctx" -}}
 								ctx,
