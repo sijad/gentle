@@ -19,12 +19,12 @@ import (
 
 {{range $type := .Types}}
 	{{- if eq $type.Kind 3 -}}
-		var {{$type.Name}}Map = map[string]func(ctx context.Context, root interface{}, args interface{}, di Dependencies) (interface{}, error){
+		var {{$type.Name}}Map = map[string]func(ctx context.Context, root interface{}, di Dependencies) (interface{}, error){
 		{{- range $field := $type.Fields}}
-			{{$field.Name | quote}}: func(ctx context.Context, root interface{}, args InputArgs, di Dependencies) (interface{}, error) {
+			{{$field.Name | quote}}: func(ctx context.Context, root interface{}, di Dependencies) (interface{}, error) {
 				{{- if $field.IsMethod}}
 					{{- if $field.HasArgs -}}
-						args = nil // TODO
+						args := "" // TODO
 					{{- end}}
 					return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
 						{{- range $param := $field.Params}}
