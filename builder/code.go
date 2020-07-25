@@ -6,8 +6,6 @@ import (
 	"go/types"
 	"io"
 	"text/template"
-
-	"github.com/dave/jennifer/jen"
 )
 
 func (g *gqlBuilder) Code(w io.Writer) error {
@@ -19,7 +17,11 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		Types               []FullType
 		Dependencies        map[string]*types.Var
 		DependenciesNameMap map[string]string
+		Sdl                 string
 	}
+
+	var sdlBuf bytes.Buffer
+	g.SDL(&sdlBuf)
 
 	d := Data{
 		PackageName:         "generated",
@@ -27,6 +29,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		Dependencies:        g.dependencies,
 		DependenciesNameMap: g.dependenciesNameMap,
 		Types:               g.FullTypes(),
+		Sdl:                 sdlBuf.String(),
 	}
 
 	source := &bytes.Buffer{}
@@ -45,32 +48,5 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		return err
 	}
 
-	return nil
-}
-
-func assertType(id, index string, typ types.Type) jen.Code {
-	typPkg, typName := typePath(typ)
-	return jen.Id(id).Index(jen.Lit(index)).Assert(jen.Do(func(s *jen.Statement) {
-		if typPkg != "" {
-			s.Qual(typPkg, typName)
-		} else {
-			s.Id(typName)
-		}
-	}))
-}
-
-func typePath(typ types.Type) (string, string) {
-	switch x := typ.(type) {
-	case *types.Basic:
-		return "", x.Name()
-	case *types.Named:
-		obj := x.Obj()
-		return obj.Pkg().Path(), obj.Name()
-	default:
-		return "", x.String()
-	}
-}
-
-func typeCode(typ types.Type) jen.Code {
 	return nil
 }

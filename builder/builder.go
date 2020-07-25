@@ -24,7 +24,6 @@ type Field struct {
 type FullType struct {
 	introspection.FullType
 	Id     string
-	Type   *types.Named
 	Fields []Field
 }
 
@@ -128,7 +127,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 
 		fullType := FullType{}
 		fullType.Id = id
-		fullType.Type = x
+		// fullType.Type = x
 		fullType.Name = name
 
 		if types.Implements(t, g.scalarInterface) {
@@ -317,11 +316,30 @@ func basicTypeName(b types.BasicKind) string {
 	switch b {
 	case types.Bool:
 		return "Boolean"
-	case types.Int, types.Int8, types.Int16, types.Int32, types.Int64,
-		types.Uint, types.Uint8, types.Uint16, types.Uint32, types.Uint64:
+	case types.Int:
 		return "Int"
-	case types.Float32, types.Float64:
+	case types.Uint:
+		return "Uint"
+	case types.Int8:
+		return "Int8"
+	case types.Uint8:
+		return "Uint8"
+	case types.Int16:
+		return "Int16"
+	case types.Uint16:
+		return "Uint16"
+	case types.Int32:
+		return "Int32"
+	case types.Uint32:
+		return "Uint32"
+	case types.Int64:
+		return "Int64"
+	case types.Uint64:
+		return "Uint64"
+	case types.Float32:
 		return "Float"
+	case types.Float64:
+		return "Float64"
 	case types.String:
 		return "String"
 	default:

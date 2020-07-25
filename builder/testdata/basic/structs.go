@@ -68,6 +68,6 @@ func (t KeyValue) UnmarshalGQL(v interface{}) error {
 }
 
 type MyScalars struct {
-	KetValue KeyValue
+	KeyValue KeyValue
 	Time     MyTime
 }

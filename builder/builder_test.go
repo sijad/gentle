@@ -41,7 +41,6 @@ func TestVarType(t *testing.T) {
 	schema := introspection.NewSchema()
 	schema.QueryType = &introspection.TypeName{Name: "MyStruct"}
 
-	builder.SDL(os.Stdout)
 	err = builder.Code(os.Stdout)
 	if err != nil {
 		fmt.Println(err)

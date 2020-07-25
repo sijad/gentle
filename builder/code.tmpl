@@ -17,33 +17,91 @@ import (
 	type Dependencies interface{}
 {{- end}}
 
+type executionContext struct {
+	*graphql.OperationContext
+}
+
+var sources = []*ast.Source{
+	&ast.Source{
+		Name: "schema.graphqls",
+		Input: {{$root.Sdl | rawQuote}},
+		BuiltIn: false,
+	},
+}
+
+var parsedSchema = gqlparser.MustLoadSchema(sources...)
+
+type executableSchema struct {}
+
+func (e *executableSchema) Schema() *ast.Schema {
+	return parsedSchema
+}
+
+func (e *executableSchema) Complexity(typeName, field string, childComplexity int, rawArgs map[string]interface{}) (int, bool) {
+	return 0, false
+}
+
+func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
+	rc := graphql.GetOperationContext(ctx)
+	ec := executionContext{rc}
+
+	switch rc.Operation.Operation {
+	case ast.Query:
+		return func(ctx context.Context) *graphql.Response {
+			data := ec._Query(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
+
+	default:
+		return graphql.OneShot(graphql.ErrorResponse(ctx, "unsupported GraphQL operation"))
+	}
+}
+
 {{range $type := .Types}}
 	{{- if eq $type.Kind 3 -}}
-		var {{$type.Name}}Map = map[string]func(ctx context.Context, root interface{}, di Dependencies) (interface{}, error){
-		{{- range $field := $type.Fields}}
-			{{$field.Name | quote}}: func(ctx context.Context, root interface{}, di Dependencies) (interface{}, error) {
-				{{- if $field.IsMethod}}
-					{{- if $field.HasArgs -}}
-						args := "" // TODO
-					{{- end}}
-					return root.(*{{$type.Type | typeGo}}).{{$field.Name}}(
-						{{- range $param := $field.Params}}
-							{{if eq $param.Name "args" -}}
-								args,
-							{{- else -}}
-								{{if eq $param.Name "ctx" -}}
-									ctx,
-								{{- else -}}
-									di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
-								{{- end -}}
-							{{- end -}}
+		var {{$type.Name | lowerCaseFirst}}Implementors = []string{ {{$type.Name | quote}} }
+		func (ec *executionContext) _{{$type.Name}}(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+			fields := graphql.CollectFields(ec.OperationContext, sel, {{$type.Name | lowerCaseFirst}}Implementors)
+
+			ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+				Object: {{$type.Name | quote}},
+			})
+
+			out := graphql.NewFieldSet(fields)
+			var invalids uint32
+			for i, field := range fields {
+				switch field.Name {
+				{{- range $field := $type.Fields}}
+				case {{$field.Name | lowerCaseFirst | quote}}:
+					{{- if $field.IsMethod}}
+						field := field
+						{{if $field.HasArgs -}}
+							args := "" // TODO
 						{{- end}}
-					){{- if not $field.HasError -}}, nil{{- end}}
-				{{else}}
-					return root.(*{{$type.Type | typeGo}}).{{$field.Name}}, nil
-				{{end -}}
-			},
-		{{- end}}
+						return root.({{$field.Type | typeGo}}).{{$field.Name}}(
+							{{- range $param := $field.Params}}
+								{{if eq $param.Name "args" -}}
+									args,
+								{{- else -}}
+									{{if eq $param.Name "ctx" -}}
+										ctx,
+									{{- else -}}
+										di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
+									{{- end -}}
+								{{- end -}}
+							{{- end}}
+						){{- if not $field.HasError -}}, nil{{- end}}
+					{{else}}
+						out.Values[i] = {{$field.Type | typeMarshalerMethodName}}(root.({{$field.Type | typeGo}}).{{$field.Name}})
+					{{- end -}}
+				{{- end -}}
+				}
+			}
 		}
 	{{end}}
 {{end}}

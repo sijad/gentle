@@ -1,8 +1,9 @@
 package builder
 
 import (
-	"go/types"
+	"fmt"
 	"strconv"
+	"strings"
 	"text/template"
 	"unicode"
 
@@ -10,11 +11,13 @@ import (
 )
 
 var funcMap = template.FuncMap{
-	"gqlType":        gqlType,
-	"lowerCaseFirst": lowerCaseFirst,
-	"upperCaseFirst": upperCaseFirst,
-	"quote":          strconv.Quote,
-	"typeGo":         typeGo,
+	"gqlType":                 gqlType,
+	"lowerCaseFirst":          lowerCaseFirst,
+	"upperCaseFirst":          upperCaseFirst,
+	"quote":                   strconv.Quote,
+	"typeGo":                  typeGo,
+	"rawQuote":                rawQuote,
+	"typeMarshalerMethodName": typeMarshalerMethodName,
 }
 
 func lowerCaseFirst(s string) string {
@@ -42,12 +45,63 @@ func gqlType(typ *introspection.TypeRef) string {
 	}
 }
 
-func typeGo(typ types.Type) string {
-	switch x := typ.(type) {
-	case *types.Named:
-		obj := x.Obj()
-		return obj.Pkg().Name() + "." + obj.Name()
+func rawQuote(s string) string {
+	return "`" + strings.Replace(s, "`", "`+\"`\"+`", -1) + "`"
+}
+
+var basicTypesGOMap = map[string]string{
+	"Boolean": "bool",
+	"Int":     "int",
+	"Uint":    "uint",
+	"Int8":    "int8",
+	"Uint8":   "uint8",
+	"Int16":   "int16",
+	"Uint16":  "uint16",
+	"Int32":   "int32",
+	"Uint32":  "uint32",
+	"Int64":   "int64",
+	"Uint64":  "uint64",
+	"Float":   "float32",
+	"Float64": "float64",
+	"String":  "string",
+}
+
+func typeGo(typ *introspection.TypeRef) string {
+	typName := "*"
+	switch typ.Kind {
+	case introspection.LIST:
+		typName += "[]" + typeGo(typ.OfType)
+	case introspection.NONNULL:
+		typName = typeGo(typ.OfType)[1:]
+	case introspection.SCALAR:
+		if val, ok := basicTypesGOMap[*typ.Name]; ok {
+			typName += val
+		} else {
+			typName += *typ.Name
+		}
+	case introspection.OBJECT:
+		typName += *typ.Name
 	default:
-		return x.String()
+		panic(fmt.Sprintf("cannot convert %s to golang type", typ.Kind))
+	}
+	return typName
+}
+
+func typeMarshalerMethodName(typ *introspection.TypeRef) string {
+	return "Marshal" + _typeMarshalerMethodName(typ)
+}
+
+func _typeMarshalerMethodName(typ *introspection.TypeRef) string {
+	switch typ.Kind {
+	case introspection.LIST:
+		return "List" + _typeMarshalerMethodName(typ.OfType)
+	case introspection.NONNULL:
+		return "NonNull" + _typeMarshalerMethodName(typ.OfType)
+	case introspection.SCALAR:
+		return "TODOScalar" + *typ.Name
+	case introspection.OBJECT:
+		return "Object" + *typ.Name
+	default:
+		panic(fmt.Sprintf("cannot marshal %s", typ.Kind))
 	}
 }
