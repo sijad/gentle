@@ -14,7 +14,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 	type Data struct {
 		PackageName         string
 		Imports             []string
-		Types               []FullType
+		Types               map[string]FullType
 		Dependencies        map[string]*types.Var
 		DependenciesNameMap map[string]string
 		Sdl                 string
@@ -23,12 +23,18 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 	var sdlBuf bytes.Buffer
 	g.SDL(&sdlBuf)
 
+	fullTypes := g.FullTypes()
+	typesMap := make(map[string]FullType, len(fullTypes))
+	for _, v := range fullTypes {
+		typesMap[v.Name] = v
+	}
+
 	d := Data{
 		PackageName:         "generated",
 		Imports:             []string{"context"},
 		Dependencies:        g.dependencies,
 		DependenciesNameMap: g.dependenciesNameMap,
-		Types:               g.FullTypes(),
+		Types:               typesMap,
 		Sdl:                 sdlBuf.String(),
 	}
 

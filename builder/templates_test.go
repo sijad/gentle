@@ -76,14 +76,14 @@ func TestTypeGo(t *testing.T) {
 		},
 		{
 			scalarRef,
-			"*MyScalar",
+			"*myPkg.MyScalar",
 		},
 		{
 			introspection.TypeRef{
 				Kind:   introspection.NONNULL,
 				OfType: &objRef,
 			},
-			"MyObjectName",
+			"myPkg.MyObjectName",
 		},
 		{
 			introspection.TypeRef{
@@ -147,7 +147,7 @@ func TestTypeGo(t *testing.T) {
 					},
 				},
 			},
-			"[][][]*MyObjectName",
+			"[][][]*myPkg.MyObjectName",
 		},
 		{
 			introspection.TypeRef{
@@ -160,12 +160,21 @@ func TestTypeGo(t *testing.T) {
 					},
 				},
 			},
-			"*[]*[]*[]*MyObjectName",
+			"*[]*[]*[]*myPkg.MyObjectName",
+		},
+	}
+
+	fullTypes := map[string]FullType{
+		"MyObjectName": {
+			PackageName: "myPkg",
+		},
+		"MyScalar": {
+			PackageName: "myPkg",
 		},
 	}
 
 	for _, typ := range types {
-		got := typeGo(&typ.typ)
+		got := typeGo(&typ.typ, fullTypes)
 		if got != typ.expect {
 			t.Errorf("Marshaler Name (%v) was incorrect, got: %s, want: %s", typ.typ, got, typ.expect)
 		}

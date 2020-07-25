@@ -12,7 +12,7 @@ import (
 
 func TestVarType(t *testing.T) {
 	cfg := &packages.Config{Mode: packages.NeedTypesInfo | packages.NeedTypes}
-	pkgs, err := packages.Load(cfg, "github.com/sijad/gentle/builder/testdata/basic")
+	pkgs, err := packages.Load(cfg, "github.com/sijad/gentle/builder/testdata/hello-world")
 
 	if err != nil {
 		t.Error(err)
@@ -39,7 +39,7 @@ func TestVarType(t *testing.T) {
 	}
 
 	schema := introspection.NewSchema()
-	schema.QueryType = &introspection.TypeName{Name: "MyStruct"}
+	schema.QueryType = &introspection.TypeName{Name: "Query"}
 
 	err = builder.Code(os.Stdout)
 	if err != nil {

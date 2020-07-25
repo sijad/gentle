@@ -10,7 +10,7 @@ import (
 {{if gt (len .Dependencies) 0 -}}
 	type Dependencies struct {
 		{{- range $dep := .Dependencies}}
-			{{$dep.Name | upperCaseFirst}} {{$dep.Type | typeGo}}
+			{{$dep.Name | upperCaseFirst}} {{typeGo $dep.Type $root.Types}}
 		{{- end -}}
 	}
 {{- else -}}
@@ -65,7 +65,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 {{range $type := .Types}}
 	{{- if eq $type.Kind 3 -}}
 		var {{$type.Name | lowerCaseFirst}}Implementors = []string{ {{$type.Name | quote}} }
-		func (ec *executionContext) _{{$type.Name}}(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+		func (ec *executionContext) _{{$type.Name}}(ctx context.Context, sel ast.SelectionSet, root {{$type.PackageName}}.{{$type.Name}}) graphql.Marshaler {
 			fields := graphql.CollectFields(ec.OperationContext, sel, {{$type.Name | lowerCaseFirst}}Implementors)
 
 			ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
@@ -83,7 +83,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 						{{if $field.HasArgs -}}
 							args := "" // TODO
 						{{- end}}
-						return root.({{$field.Type | typeGo}}).{{$field.Name}}(
+						return root.({{typeGo $field.Type $root.Types}}).{{$field.Name}}(
 							{{- range $param := $field.Params}}
 								{{if eq $param.Name "args" -}}
 									args,
@@ -97,7 +97,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 							{{- end}}
 						){{- if not $field.HasError -}}, nil{{- end}}
 					{{else}}
-						out.Values[i] = {{$field.Type | typeMarshalerMethodName}}(root.({{$field.Type | typeGo}}).{{$field.Name}})
+						out.Values[i] = {{$field.Type | typeMarshalerMethodName}}(root.({{typeGo $field.Type $root.Types}}).{{$field.Name}})
 					{{- end -}}
 				{{- end -}}
 				}

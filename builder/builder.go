@@ -23,8 +23,9 @@ type Field struct {
 
 type FullType struct {
 	introspection.FullType
-	Id     string
-	Fields []Field
+	Id          string
+	PackageName string
+	Fields      []Field
 }
 
 type gqlBuilder struct {
@@ -284,6 +285,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		fullType.Kind = kind
 		// TODO fullType.Description
 		fullType.Fields = fields
+		fullType.PackageName = x.Obj().Pkg().Name()
 
 		g.AddFullType(fullType)
 		return nonNilAbleTypeRef(&introspection.TypeRef{

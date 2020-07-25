@@ -66,21 +66,31 @@ var basicTypesGOMap = map[string]string{
 	"String":  "string",
 }
 
-func typeGo(typ *introspection.TypeRef) string {
+func typeGo(typ *introspection.TypeRef, fullTypes map[string]FullType) string {
 	typName := "*"
 	switch typ.Kind {
 	case introspection.LIST:
-		typName += "[]" + typeGo(typ.OfType)
+		typName += "[]" + typeGo(typ.OfType, fullTypes)
 	case introspection.NONNULL:
-		typName = typeGo(typ.OfType)[1:]
+		typName = typeGo(typ.OfType, fullTypes)[1:]
 	case introspection.SCALAR:
 		if val, ok := basicTypesGOMap[*typ.Name]; ok {
 			typName += val
 		} else {
-			typName += *typ.Name
+			name := *typ.Name
+			fullType, ok := fullTypes[name]
+			if !ok {
+				panic(fmt.Sprintf("cannot fild full type %s", name))
+			}
+			typName += fullType.PackageName + "." + name
 		}
 	case introspection.OBJECT:
-		typName += *typ.Name
+		name := *typ.Name
+		fullType, ok := fullTypes[name]
+		if !ok {
+			panic(fmt.Sprintf("cannot fild full type %s", name))
+		}
+		typName += fullType.PackageName + "." + name
 	default:
 		panic(fmt.Sprintf("cannot convert %s to golang type", typ.Kind))
 	}
