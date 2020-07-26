@@ -1,9 +1,9 @@
 {{- range $t := .Types -}}
-{{- if eq $t.Kind 0 -}}
+{{- if eq $t.Kind "SCALAR" -}}
 scalar {{$t.Name}}
 {{- end}}
-{{- if or (eq $t.Kind 3) (eq $t.Kind 7) -}}
-{{if eq $t.Kind 3}}type{{else}}input{{end}} {{$t.Name}} {
+{{- if or (eq $t.Kind "OBJECT") (eq $t.Kind "INPUTOBJECT") -}}
+{{if eq $t.Kind "OBJECT"}}type{{else}}input{{end}} {{$t.Name}} {
 {{- range $f := $t.Fields}}
   {{$f.Name | lowerCaseFirst}}
   {{- if gt (len $f.Args) 0 -}}

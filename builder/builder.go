@@ -6,27 +6,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 	"github.com/sijad/gentle"
 	"golang.org/x/tools/go/packages"
 )
 
 var scalarInterface = reflect.TypeOf(struct{ gentle.Scalar }{}).Field(0).Type
-
-type Field struct {
-	introspection.Field
-	IsMethod bool
-	HasError bool
-	HasArgs  bool
-	Params   []*types.Var
-}
-
-type FullType struct {
-	introspection.FullType
-	Id          string
-	PackageName string
-	Fields      []Field
-}
 
 type gqlBuilder struct {
 	types               []FullType
@@ -45,10 +29,10 @@ func (g *gqlBuilder) GetFullType(name string) *FullType {
 	return &g.types[index]
 }
 
-func (g *gqlBuilder) GetTypeRef(name string) *introspection.TypeRef {
+func (g *gqlBuilder) GetTypeRef(name string) *TypeRef {
 	fullType := g.GetFullType(name)
 	if fullType != nil {
-		return &introspection.TypeRef{
+		return &TypeRef{
 			Kind: fullType.Kind,
 			Name: &fullType.Name,
 		}
@@ -95,12 +79,12 @@ func (g *gqlBuilder) AddDependency(dep *types.Var) error {
 	return nil
 }
 
-func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
+func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 	switch x := t.(type) {
 	case *types.Basic:
 		name := basicTypeName(x.Kind())
-		return nonNilAbleTypeRef(&introspection.TypeRef{
-			Kind: introspection.SCALAR,
+		return nonNullAbleTypeRef(&TypeRef{
+			Kind: SCALAR,
 			Name: &name,
 		}), nil
 	case *types.Slice:
@@ -108,8 +92,8 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nonNilAbleTypeRef(&introspection.TypeRef{
-			Kind:   introspection.LIST,
+		return nonNullAbleTypeRef(&TypeRef{
+			Kind:   LIST,
 			OfType: ofType,
 		}), nil
 	case *types.Pointer:
@@ -132,10 +116,10 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		fullType.Name = name
 
 		if types.Implements(t, g.scalarInterface) {
-			fullType.Kind = introspection.SCALAR
+			fullType.Kind = SCALAR
 			g.AddFullType(fullType)
-			return nonNilAbleTypeRef(&introspection.TypeRef{
-				Kind: introspection.SCALAR,
+			return nonNullAbleTypeRef(&TypeRef{
+				Kind: SCALAR,
 				Name: &name,
 			}), nil
 		}
@@ -145,7 +129,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		}
 
 		// returns underlying element type and prevents infinite loop
-		underlingType := func(t types.Type) (*introspection.TypeRef, error) {
+		underlingType := func(t types.Type) (*TypeRef, error) {
 			typ := t
 			isPtr := false
 			if ptr, ok := typ.(*types.Pointer); ok {
@@ -155,14 +139,14 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 
 			if typ, ok := typ.(*types.Named); ok {
 				if g.processingFullTypes[typ.String()] {
-					ref := &introspection.TypeRef{
-						Kind: introspection.SCALAR,
+					ref := &TypeRef{
+						Kind: SCALAR,
 						Name: &name,
 					}
 					if isPtr {
 						return ref, nil
 					}
-					return nonNilAbleTypeRef(ref), nil
+					return nonNullAbleTypeRef(ref), nil
 				}
 			}
 
@@ -190,9 +174,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 			fields = append(fields, field)
 		}
 
-		kind := introspection.OBJECT
+		var kind TypeKind = OBJECT
 		if strings.HasSuffix(name, "Input") {
-			kind = introspection.INPUTOBJECT
+			kind = INPUTOBJECT
 		}
 		for i := 0; i < x.NumMethods(); i++ {
 			method := x.Method(i)
@@ -201,7 +185,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 				continue
 			}
 
-			if kind == introspection.INPUTOBJECT {
+			if kind == INPUTOBJECT {
 				return nil, fmt.Errorf("Input types can not have resolvers")
 			}
 
@@ -238,7 +222,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 							return nil, err
 						}
 
-						field.Args = append(field.Args, introspection.InputValue{
+						field.Args = append(field.Args, InputValue{
 							Name: argField.Name(),
 							Type: *atyp,
 							// TODO Description: "",
@@ -288,7 +272,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*introspection.TypeRef, error) {
 		fullType.PackageName = x.Obj().Pkg().Name()
 
 		g.AddFullType(fullType)
-		return nonNilAbleTypeRef(&introspection.TypeRef{
+		return nonNullAbleTypeRef(&TypeRef{
 			Kind: kind,
 			Name: &name,
 		}), nil
@@ -349,9 +333,9 @@ func basicTypeName(b types.BasicKind) string {
 	}
 }
 
-func nonNilAbleTypeRef(typ *introspection.TypeRef) *introspection.TypeRef {
-	return &introspection.TypeRef{
-		Kind:   introspection.NONNULL,
+func nonNullAbleTypeRef(typ *TypeRef) *TypeRef {
+	return &TypeRef{
+		Kind:   NONNULL,
 		OfType: typ,
 	}
 }

@@ -2,8 +2,6 @@ package builder
 
 import (
 	"testing"
-
-	"github.com/jensneuse/graphql-go-tools/pkg/introspection"
 )
 
 func TestTypeGo(t *testing.T) {
@@ -13,41 +11,41 @@ func TestTypeGo(t *testing.T) {
 	typNameObj := "MyObjectName"
 	typNameScalar := "MyScalar"
 
-	stringRef := introspection.TypeRef{
-		Kind: introspection.SCALAR,
+	stringRef := TypeRef{
+		Kind: SCALAR,
 		Name: &typNameString,
 	}
-	intRef := introspection.TypeRef{
-		Kind: introspection.SCALAR,
+	intRef := TypeRef{
+		Kind: SCALAR,
 		Name: &typNameInt,
 	}
-	uintRef := introspection.TypeRef{
-		Kind: introspection.SCALAR,
+	uintRef := TypeRef{
+		Kind: SCALAR,
 		Name: &typNameUint,
 	}
-	objRef := introspection.TypeRef{
-		Kind: introspection.OBJECT,
+	objRef := TypeRef{
+		Kind: OBJECT,
 		Name: &typNameObj,
 	}
-	scalarRef := introspection.TypeRef{
-		Kind: introspection.OBJECT,
+	scalarRef := TypeRef{
+		Kind: OBJECT,
 		Name: &typNameScalar,
 	}
-	nonNullStringRef := introspection.TypeRef{
-		Kind:   introspection.NONNULL,
+	nonNullStringRef := TypeRef{
+		Kind:   NONNULL,
 		OfType: &stringRef,
 	}
-	nonNullIntRef := introspection.TypeRef{
-		Kind:   introspection.NONNULL,
+	nonNullIntRef := TypeRef{
+		Kind:   NONNULL,
 		OfType: &intRef,
 	}
-	nonNullUintRef := introspection.TypeRef{
-		Kind:   introspection.NONNULL,
+	nonNullUintRef := TypeRef{
+		Kind:   NONNULL,
 		OfType: &uintRef,
 	}
 
 	types := []struct {
-		typ    introspection.TypeRef
+		typ    TypeRef
 		expect string
 	}{
 		{
@@ -79,45 +77,45 @@ func TestTypeGo(t *testing.T) {
 			"*myPkg.MyScalar",
 		},
 		{
-			introspection.TypeRef{
-				Kind:   introspection.NONNULL,
+			TypeRef{
+				Kind:   NONNULL,
 				OfType: &objRef,
 			},
 			"myPkg.MyObjectName",
 		},
 		{
-			introspection.TypeRef{
-				Kind: introspection.NONNULL,
-				OfType: &introspection.TypeRef{
-					Kind:   introspection.LIST,
+			TypeRef{
+				Kind: NONNULL,
+				OfType: &TypeRef{
+					Kind:   LIST,
 					OfType: &nonNullIntRef,
 				},
 			},
 			"[]int",
 		},
 		{
-			introspection.TypeRef{
-				Kind: introspection.NONNULL,
-				OfType: &introspection.TypeRef{
-					Kind:   introspection.LIST,
+			TypeRef{
+				Kind: NONNULL,
+				OfType: &TypeRef{
+					Kind:   LIST,
 					OfType: &uintRef,
 				},
 			},
 			"[]*uint32",
 		},
 		{
-			introspection.TypeRef{
-				Kind: introspection.NONNULL,
-				OfType: &introspection.TypeRef{
-					Kind: introspection.LIST,
-					OfType: &introspection.TypeRef{
-						Kind: introspection.NONNULL,
-						OfType: &introspection.TypeRef{
-							Kind: introspection.LIST,
-							OfType: &introspection.TypeRef{
-								Kind: introspection.NONNULL,
-								OfType: &introspection.TypeRef{
-									Kind:   introspection.LIST,
+			TypeRef{
+				Kind: NONNULL,
+				OfType: &TypeRef{
+					Kind: LIST,
+					OfType: &TypeRef{
+						Kind: NONNULL,
+						OfType: &TypeRef{
+							Kind: LIST,
+							OfType: &TypeRef{
+								Kind: NONNULL,
+								OfType: &TypeRef{
+									Kind:   LIST,
 									OfType: &nonNullIntRef,
 								},
 							},
@@ -128,18 +126,18 @@ func TestTypeGo(t *testing.T) {
 			"[][][]int",
 		},
 		{
-			introspection.TypeRef{
-				Kind: introspection.NONNULL,
-				OfType: &introspection.TypeRef{
-					Kind: introspection.LIST,
-					OfType: &introspection.TypeRef{
-						Kind: introspection.NONNULL,
-						OfType: &introspection.TypeRef{
-							Kind: introspection.LIST,
-							OfType: &introspection.TypeRef{
-								Kind: introspection.NONNULL,
-								OfType: &introspection.TypeRef{
-									Kind:   introspection.LIST,
+			TypeRef{
+				Kind: NONNULL,
+				OfType: &TypeRef{
+					Kind: LIST,
+					OfType: &TypeRef{
+						Kind: NONNULL,
+						OfType: &TypeRef{
+							Kind: LIST,
+							OfType: &TypeRef{
+								Kind: NONNULL,
+								OfType: &TypeRef{
+									Kind:   LIST,
 									OfType: &objRef,
 								},
 							},
@@ -150,12 +148,12 @@ func TestTypeGo(t *testing.T) {
 			"[][][]*myPkg.MyObjectName",
 		},
 		{
-			introspection.TypeRef{
-				Kind: introspection.LIST,
-				OfType: &introspection.TypeRef{
-					Kind: introspection.LIST,
-					OfType: &introspection.TypeRef{
-						Kind:   introspection.LIST,
+			TypeRef{
+				Kind: LIST,
+				OfType: &TypeRef{
+					Kind: LIST,
+					OfType: &TypeRef{
+						Kind:   LIST,
 						OfType: &objRef,
 					},
 				},
