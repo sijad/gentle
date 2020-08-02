@@ -10,7 +10,7 @@ import (
 func (g *gqlBuilder) Code(w io.Writer) error {
 	type Data struct {
 		PackageName         string
-		Imports             []string
+		Imports             map[string]string
 		Types               map[string]FullType
 		Dependencies        map[string]*types.Var
 		DependenciesNameMap map[string]string
@@ -22,13 +22,26 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 
 	fullTypes := g.FullTypes()
 	typesMap := make(map[string]FullType, len(fullTypes))
+	imports := map[string]string{
+		"context":                             "",
+		"bytes":                               "",
+		"github.com/99designs/gqlgen/graphql": "",
+		// "github.com/99designs/gqlgen/graphql/introspection": "",
+		"github.com/vektah/gqlparser/v2/ast": "",
+		"github.com/vektah/gqlparser/v2":     "gqlparser",
+	}
+
 	for _, v := range fullTypes {
 		typesMap[v.Name] = v
+
+		if _, ok := imports[v.PackageName]; !ok {
+			imports[v.PackagePath] = ""
+		}
 	}
 
 	d := Data{
 		PackageName:         "graph",
-		Imports:             []string{"context"},
+		Imports:             imports,
 		Dependencies:        g.dependencies,
 		DependenciesNameMap: g.dependenciesNameMap,
 		Types:               typesMap,

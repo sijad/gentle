@@ -1,10 +1,12 @@
 {{- $root := . -}}
+{{- $queryType := .Types.Query -}}
+{{- $mutationType := .Types.Mutation -}}
 package {{.PackageName}}
 
 import (
-{{- range $imp := .Imports}}
-	{{$imp | quote}}
-{{end -}}
+{{- range $imp, $alias := .Imports}}
+	{{$alias}} {{$imp | quote}}
+{{- end -}}
 )
 
 {{if gt (len .Dependencies) 0 -}}
@@ -23,7 +25,7 @@ type executionContext struct {
 }
 
 var sources = []*ast.Source{
-	&ast.Source{
+	{
 		Name: "schema.graphqls",
 		Input: {{$root.Sdl | rawQuote}},
 		BuiltIn: false,
@@ -33,12 +35,25 @@ var sources = []*ast.Source{
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 type executableSchema struct {
-	query *helloWorld.Query
+	{{if $queryType -}}
+		Query *{{$queryType.PackageName}}.{{$queryType.Name}}
+	{{- end }}
+	{{if $mutationType -}}
+		Mutation *{{$mutationType.PackageName}}.{{$mutationType.Name}}
+	{{- end }}
 }
 
-func NewExecutableSchema(query *helloWorld.Query) graphql.ExecutableSchema {
+func NewExecutableSchema(
+{{- if $queryType -}}query *{{$queryType.PackageName}}.{{$queryType.Name}}{{- end -}},
+{{- if $mutationType -}}mutation *{{$mutationType.PackageName}}.{{$mutationType.Name}}{{- end -}}
+) graphql.ExecutableSchema {
 	return &executableSchema{
-		query,
+		{{if $queryType -}}
+			Query: query,
+		{{- end}}
+		{{if $mutationType -}}
+			Mutation: mutation,
+		{{- end}}
 	}
 }
 

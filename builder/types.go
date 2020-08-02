@@ -54,6 +54,7 @@ type FullType struct {
 	PossibleTypes []TypeRef
 	Id            string
 	PackageName   string
+	PackagePath   string
 }
 
 type TypeRef struct {

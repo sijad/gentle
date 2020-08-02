@@ -270,6 +270,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 		// TODO fullType.Description
 		fullType.Fields = fields
 		fullType.PackageName = x.Obj().Pkg().Name()
+		fullType.PackagePath = x.Obj().Pkg().Path()
 
 		g.AddFullType(fullType)
 		return nonNullAbleTypeRef(&TypeRef{
