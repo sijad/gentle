@@ -6,7 +6,20 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/sijad/gentle/builder/internal"
 )
+
+//go:generate go run github.com/go-bindata/go-bindata/go-bindata -o=internal/bindata.go -pkg=internal -modtime=1 ./template/...
+
+func init() {
+	templates.Funcs(funcMap)
+	for _, asset := range internal.AssetNames() {
+		templates = template.Must(templates.New(asset).Parse(string(internal.MustAsset(asset))))
+	}
+}
+
+var templates = template.New("templates")
 
 var funcMap = template.FuncMap{
 	"gqlType":                 gqlType,

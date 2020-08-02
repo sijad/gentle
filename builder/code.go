@@ -5,12 +5,9 @@ import (
 	"go/format"
 	"go/types"
 	"io"
-	"text/template"
 )
 
 func (g *gqlBuilder) Code(w io.Writer) error {
-	t := template.Must(template.New("code.tmpl").Funcs(funcMap).ParseFiles("code.tmpl"))
-
 	type Data struct {
 		PackageName         string
 		Imports             []string
@@ -40,7 +37,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 
 	source := &bytes.Buffer{}
 
-	if err := t.Execute(source, d); err != nil {
+	if err := templates.ExecuteTemplate(source, "template/code.tmpl", d); err != nil {
 		return err
 	}
 
