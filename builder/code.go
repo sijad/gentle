@@ -27,7 +27,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 	}
 
 	d := Data{
-		PackageName:         "generated",
+		PackageName:         "graph",
 		Imports:             []string{"context"},
 		Dependencies:        g.dependencies,
 		DependenciesNameMap: g.dependenciesNameMap,

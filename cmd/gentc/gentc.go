@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,20 @@ func main() {
 		},
 	)
 
+	cmd.AddCommand(
+		&cobra.Command{
+			Use:     "generate",
+			Short:   "generate go code for schema directory",
+			Example: "gentc generate ./graph/schema",
+			Args:    cobra.ExactArgs(1),
+			Run: func(cmd *cobra.Command, path []string) {
+				if err := generate(path[0], defaultGeneratedPath); err != nil {
+					log.Fatalln(err)
+				}
+			},
+		},
+	)
+
 	if err := cmd.Execute(); err != nil {
 		log.Fatalln(err)
 	}
@@ -34,11 +49,11 @@ func initProj(target string) error {
 		return err
 	}
 
-	if err := writeFileIfNotExist("graph/schema/query.go", []byte(defaultQuery), 0644); err != nil {
+	if err := writeFileIfNotExist(path.Join(target, "query.go"), []byte(defaultQuery), 0644); err != nil {
 		return fmt.Errorf("creating query.go file: %w", err)
 	}
 
-	if err := writeFileIfNotExist("graph/generate.go", []byte(genFile), 0644); err != nil {
+	if err := writeFileIfNotExist(defaultGeneratePath, []byte(genFile), 0644); err != nil {
 		return fmt.Errorf("creating generate.go file: %w", err)
 	}
 
@@ -56,8 +71,10 @@ func writeFileIfNotExist(filename string, data []byte, perm os.FileMode) error {
 }
 
 const (
-	defaultSchemaPath = "./graph/schema"
-	genFile           = `package graph
+	defaultSchemaPath    = "./graph/schema"
+	defaultGeneratedPath = "./graph/generated.go"
+	defaultGeneratePath  = "./graph/generate.go"
+	genFile              = `package graph
 
 //go:generate go run github.com/sijad/gentle/cmd/gentc generate ./schema
 `
