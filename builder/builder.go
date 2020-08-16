@@ -176,6 +176,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 
 				if typeField.Embedded() {
 					if t, ok := typeField.Type().(*types.Named); ok {
+						// TODO panic on duplicate fields
 						if err := addStrucFields(t); err != nil {
 							return err
 						}
