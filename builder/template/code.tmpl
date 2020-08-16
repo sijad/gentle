@@ -160,10 +160,13 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				return graphql.Null
 			}
 			{{ if eq $type.Kind "OBJECT" -}}
-				return nil
+				// TODO
+				return graphql.Null
 			{{- else -}}
 				{{ if isBasicScalar $type -}}
 					return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
+				{{- else -}}
+					return encodingBasic.MarshalScalar(v)
 				{{- end }}
 			{{- end }}
 		{{- end }}

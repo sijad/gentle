@@ -53,7 +53,7 @@ func gqlType(typ *TypeRef) string {
 	case SCALAR, INPUTOBJECT, OBJECT:
 		return *typ.Name
 	default:
-		panic("not implimented")
+		panic("not implemented")
 	}
 }
 

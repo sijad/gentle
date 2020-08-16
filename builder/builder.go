@@ -116,7 +116,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 		fullType.PackageName = x.Obj().Pkg().Name()
 		fullType.PackagePath = x.Obj().Pkg().Path()
 
-		if types.Implements(t, g.scalarInterface) {
+		if types.Implements(t, g.scalarInterface) || types.Implements(types.NewPointer(t), g.scalarInterface) {
 			fullType.Kind = SCALAR
 			g.AddFullType(fullType)
 			return nonNullAbleTypeRef(&TypeRef{
@@ -301,7 +301,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			Name: &name,
 		}), nil
 	default:
-		return nil, fmt.Errorf("not implimented")
+		return nil, fmt.Errorf("not implemented")
 	}
 }
 

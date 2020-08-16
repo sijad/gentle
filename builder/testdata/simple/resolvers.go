@@ -1,20 +1,15 @@
-package simple
+package echo
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
+	"math/rand"
+	"time"
 )
 
-type resolvers struct {
-	hello int
-}
-
 type Query struct {
-	*resolvers
-	hello string
-	aaaa  uint32
+	Hello string
 }
 
 // YesNo helps
@@ -33,31 +28,35 @@ func (y *YesNo) UnmarshalGQL(v interface{}) error {
 	return nil
 }
 
-func (y YesNo) MarshalGQL(w io.Writer) {
-	if y {
-		w.Write([]byte(`"yes"`))
+func (y YesNo) MarshalGQL() []byte {
+	if *y {
+		return []byte(`"yes"`)
 	} else {
-		w.Write([]byte(`"no"`))
+		return []byte(`"no"`)
 	}
 }
 
-type echoPayload struct {
-	result string
+type EchoPayload struct {
+	Echo string
 }
 
-func (r *Query) Echo(txt string) echoPayload {
-	return echoPayload{txt}
+func (r *Query) Echo(args struct{ Txt string }) *EchoPayload {
+	return &EchoPayload{args.Txt}
 }
 
-func (r *Query) RandomNumber(ctx context.Context, id int) (*int, error) {
-	fmt.Println(r.hello + "121")
+func (r *Query) RandomNumber(ctx context.Context) (*int, error) {
 	return nil, errors.New("not found")
 }
 
-func (r Query) RandomYesOrNo(ctx context.Context, id int) []YesNo {
-	return nil
+func (r Query) RandomYesOrNo(ctx context.Context) YesNo {
+	rand.Seed(time.Now().UnixNano())
+	if rand.Intn(2) == 1 {
+		return true
+	} else {
+		return false
+	}
 }
 
-func RandomYesOrNo(ctx context.Context, id int) [][]YesNo {
+func RandomYesOrNo(ctx context.Context) [][]YesNo {
 	return nil
 }

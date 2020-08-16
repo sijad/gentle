@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/sijad/gentle"
 )
 
 // MarshalString returns graphql for string
@@ -60,28 +61,37 @@ func MarshalUInt16(i uint16) graphql.Marshaler {
 	return MarshalUInt64(uint64(i))
 }
 
-// MarshalUInt32 graphql for uint32
+// MarshalUInt32 returns graphql for uint32
 func MarshalUInt32(i uint32) graphql.Marshaler {
 	return MarshalUInt64(uint64(i))
 }
 
-// MarshalUInt64 graphql for uint64
+// MarshalUInt64 returns graphql for uint64
 func MarshalUInt64(i uint64) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
 		io.WriteString(w, strconv.FormatUint(i, 10))
 	})
 }
 
-// MarshalFloat32 graphql for float32
+// MarshalFloat32 returns graphql for float32
 func MarshalFloat32(f float32) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
 		io.WriteString(w, fmt.Sprintf("%g", f))
 	})
 }
 
-// MarshalFloat32 graphql for float64
+// MarshalFloat32 returns graphql for float64
 func MarshalFloat64(f float64) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
 		io.WriteString(w, fmt.Sprintf("%g", f))
+	})
+}
+
+// MarshalScalar returns graphql marshaler for a custom scalar
+func MarshalScalar(obj gentle.Scalar) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		if _, err := w.Write(obj.MarshalGQL()); err != nil {
+			panic(err)
+		}
 	})
 }

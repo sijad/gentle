@@ -10,30 +10,18 @@ import (
 
 func TestVarType(t *testing.T) {
 	cfg := &packages.Config{Mode: packages.NeedTypesInfo | packages.NeedTypes}
-	pkgs, err := packages.Load(cfg, "github.com/sijad/gentle/builder/testdata/hello-world")
+	pkgs, err := packages.Load(cfg, "github.com/sijad/gentle/builder/testdata/simple")
 
 	if err != nil {
 		t.Error(err)
 	}
 
 	builder := NewGQLBuilder()
-
-	for _, pkg := range pkgs {
-		for _, v := range pkg.TypesInfo.Defs {
-			if v == nil {
-				continue
-			}
-
-			typeName, ok := v.(*types.TypeName)
-
-			if !ok {
-				continue
-			}
-
-			if _, err := builder.ImportType(typeName.Type()); err != nil {
-				t.Error(err)
-			}
-		}
+	pkg := pkgs[0]
+	query := pkg.Types.Scope().Lookup("Query")
+	typeName := query.(*types.TypeName)
+	if _, err := builder.ImportType(typeName.Type()); err != nil {
+		t.Error(err)
 	}
 
 	err = builder.Code(os.Stdout)
