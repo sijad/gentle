@@ -29,6 +29,7 @@ var funcMap = template.FuncMap{
 	"typeGo":                  typeGo,
 	"rawQuote":                rawQuote,
 	"typeMarshalerMethodName": typeMarshalerMethodName,
+	"isBasicScalar":           isBasicScalar,
 }
 
 func lowerCaseFirst(s string) string {
@@ -77,23 +78,6 @@ var basicTypesGOMap = map[string]string{
 	"String":  "string",
 }
 
-var basicTypesUnmarshalMap = map[string]string{
-	"Boolean": "",
-	"Int":     "",
-	"Uint":    "",
-	"Int8":    "",
-	"Uint8":   "",
-	"Int16":   "",
-	"Uint16":  "",
-	"Int32":   "",
-	"Uint32":  "",
-	"Int64":   "",
-	"Uint64":  "",
-	"Float":   "",
-	"Float64": "",
-	"String":  "graphql.MarshalString",
-}
-
 func typeGo(typ *TypeRef, fullTypes map[string]FullType) string {
 	typName := "*"
 	switch typ.Kind {
@@ -136,13 +120,19 @@ func _typeMarshalerMethodName(typ *TypeRef) string {
 	case NONNULL:
 		return "NonNull" + _typeMarshalerMethodName(typ.OfType)
 	case SCALAR:
-		if val, ok := basicTypesGOMap[*typ.Name]; ok {
-			return val
-		}
 		return *typ.Name
 	case OBJECT:
 		return "Object" + *typ.Name
 	default:
 		panic(fmt.Sprintf("cannot marshal %s", typ.Kind))
 	}
+}
+
+func isBasicScalar(typ *TypeRef) bool {
+	if typ.Kind == SCALAR {
+		if _, exists := basicTypesGOMap[*typ.Name]; exists {
+			return true
+		}
+	}
+	return false
 }

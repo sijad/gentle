@@ -124,8 +124,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 					Args:     nil,
 					IsMethod: true,
 				}
-				_ctx = graphql.WithFieldContext(ctx, fc)
+				ctx = graphql.WithFieldContext(ctx, fc)
+
 				// TODO args
+
 				res := obj.{{$field.Name}}(
 					{{- range $param := $field.Params}}
 						{{if eq $param.Name "args" -}}
@@ -139,8 +141,30 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 						{{- end -}}
 					{{- end}}
 				)
-				return graphql.MarshalString(res)
+
+				return ec.{{$field.Type | typeMarshalerMethodName}}(ctx, field.Selections, res)
 			}
 		{{- end -}}
 	{{end}}
+{{end}}
+
+// Marshallers
+
+{{range $type := .Marshallers}}
+	func (ec *executionContext) {{$type | typeMarshalerMethodName}}(ctx context.Context, sel ast.SelectionSet, v {{typeGo $type $root.Types}}) graphql.Marshaler {
+		{{ if eq $type.Kind "NONNULL" -}}
+			return ec.{{$type.OfType | typeMarshalerMethodName}}(ctx, sel, &v)
+		{{- else -}}
+			if v == nil {
+				return graphql.Null
+			}
+			{{ if eq $type.Kind "OBJECT" -}}
+				return nil
+			{{- else -}}
+				{{ if isBasicScalar $type -}}
+					return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
+				{{- end }}
+			{{- end }}
+		{{- end }}
+	}
 {{end}}

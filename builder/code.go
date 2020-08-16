@@ -7,16 +7,17 @@ import (
 	"io"
 )
 
-func (g *gqlBuilder) Code(w io.Writer) error {
-	type Data struct {
-		PackageName         string
-		Imports             map[string]string
-		Types               map[string]FullType
-		Dependencies        map[string]*types.Var
-		DependenciesNameMap map[string]string
-		Sdl                 string
-	}
+type CodeData struct {
+	PackageName         string
+	Imports             map[string]string
+	Types               map[string]FullType
+	Dependencies        map[string]*types.Var
+	DependenciesNameMap map[string]string
+	Marshallers         []TypeRef
+	Sdl                 string
+}
 
+func (g *gqlBuilder) Code(w io.Writer) error {
 	var sdlBuf bytes.Buffer
 	g.SDL(&sdlBuf)
 
@@ -27,9 +28,13 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		"bytes":                               "",
 		"github.com/99designs/gqlgen/graphql": "",
 		// "github.com/99designs/gqlgen/graphql/introspection": "",
-		"github.com/vektah/gqlparser/v2/ast": "",
-		"github.com/vektah/gqlparser/v2":     "gqlparser",
+		"github.com/vektah/gqlparser/v2/ast":     "",
+		"github.com/vektah/gqlparser/v2":         "gqlparser",
+		"github.com/sijad/gentle/encoding/basic": "encodingBasic", // TODO check if we really need basic encoding
 	}
+
+	marshallers := []TypeRef{}
+	marshallersMap := make(map[string]bool)
 
 	for _, v := range fullTypes {
 		typesMap[v.Name] = v
@@ -37,15 +42,29 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		if _, ok := imports[v.PackageName]; !ok {
 			imports[v.PackagePath] = ""
 		}
+
+		for _, field := range v.Fields {
+			typ := &field.Type
+			for typ != nil {
+				name := typeMarshalerMethodName(typ)
+				if _, ok := marshallersMap[name]; !ok {
+					marshallersMap[name] = true
+					marshallers = append(marshallers, *typ)
+					typ = typ.OfType
+				}
+			}
+		}
+
 	}
 
-	d := Data{
+	d := CodeData{
 		PackageName:         "graph",
 		Imports:             imports,
 		Dependencies:        g.dependencies,
 		DependenciesNameMap: g.dependenciesNameMap,
 		Types:               typesMap,
 		Sdl:                 sdlBuf.String(),
+		Marshallers:         marshallers,
 	}
 
 	source := &bytes.Buffer{}
