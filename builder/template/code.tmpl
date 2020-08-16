@@ -108,8 +108,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 						out.Concurrently(i, func() graphql.Marshaler {
 							return ec._{{$type.Name}}_{{$field.Name}}(ctx, field, obj)
 						})
-
-					{{else}}
+					{{- else -}}
 						out.Values[i] = {{$field.Type | typeMarshalerMethodName}}(obj.{{$field.Name}})
 					{{- end -}}
 				{{- end -}}

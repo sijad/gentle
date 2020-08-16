@@ -50,8 +50,8 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 				if _, ok := marshallersMap[name]; !ok {
 					marshallersMap[name] = true
 					marshallers = append(marshallers, *typ)
-					typ = typ.OfType
 				}
+				typ = typ.OfType
 			}
 		}
 

@@ -123,10 +123,6 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 				Name: &name,
 			}), nil
 		}
-		strct, ok := x.Underlying().(*types.Struct)
-		if !ok {
-			return nil, fmt.Errorf("only named structs are supported")
-		}
 
 		// returns underlying element type and prevents infinite loop
 		underlingType := func(t types.Type) (*TypeRef, error) {
@@ -153,113 +149,138 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			return g.ImportType(t)
 		}
 
-		var fields []Field
-		for i := 0; i < strct.NumFields(); i++ {
-			typeField := strct.Field(i)
-
-			if !typeField.Exported() {
-				continue
-			}
-
-			fieldName := typeField.Name()
-			field := Field{}
-			field.Name = fieldName
-			// TODO field.Description
-
-			ftyp, err := underlingType(typeField.Type())
-			if err != nil {
-				return nil, err
-			}
-			field.Type = *ftyp
-			fields = append(fields, field)
-		}
-
 		var kind TypeKind = OBJECT
 		if strings.HasSuffix(name, "Input") {
 			kind = INPUTOBJECT
 		}
-		for i := 0; i < x.NumMethods(); i++ {
-			method := x.Method(i)
 
-			if !method.Exported() {
-				continue
+		var fields []Field
+
+		var addStrucFields func(namedTyp *types.Named) error
+		addStrucFields = func(namedTyp *types.Named) error {
+			strct, ok := namedTyp.Underlying().(*types.Struct)
+			if !ok {
+				return fmt.Errorf("only named structs are supported")
 			}
 
-			if kind == INPUTOBJECT {
-				return nil, fmt.Errorf("Input types can not have resolvers")
-			}
+			for i := 0; i < strct.NumFields(); i++ {
+				typeField := strct.Field(i)
 
-			methodSig := method.Type().(*types.Signature)
+				if !typeField.Exported() {
+					continue
+				}
 
-			fieldName := method.Name()
-			field := Field{}
-			field.Name = fieldName
-			field.IsMethod = true
-			// TODO field.Description
-
-			params := methodSig.Params()
-			for i := 0; i < params.Len(); i++ {
-				param := params.At(i)
-				if param.Name() == "args" {
-					var argsStruct *types.Struct
-					switch xx := param.Type().(type) {
-					case *types.Named:
-						argsStruct = xx.Underlying().(*types.Struct)
-					case *types.Struct:
-						argsStruct = xx
-					default:
-						return nil, fmt.Errorf("args can only be struct")
-					}
-					for i := 0; i < argsStruct.NumFields(); i++ {
-						argField := argsStruct.Field(i)
-
-						if !argField.Exported() {
-							continue
+				if typeField.Embedded() {
+					if t, ok := typeField.Type().(*types.Named); ok {
+						if err := addStrucFields(t); err != nil {
+							return err
 						}
-
-						atyp, err := underlingType(argField.Type())
-						if err != nil {
-							return nil, err
-						}
-
-						field.Args = append(field.Args, InputValue{
-							Name: argField.Name(),
-							Type: *atyp,
-							// TODO Description: "",
-						})
-					}
-					field.HasArgs = true
-				} else {
-					if err := g.AddDependency(param); err != nil {
-						return nil, err
+						continue
 					}
 				}
-				field.Params = append(field.Params, param)
-			}
 
-			methodResults := methodSig.Results()
+				fieldName := typeField.Name()
+				field := Field{}
+				field.Name = fieldName
+				// TODO field.Description
 
-			switch methodResults.Len() {
-			case 0:
-				return nil, fmt.Errorf("resolvers must return at least one result")
-			case 1:
-			case 2:
-				if secTyp, ok := methodResults.At(1).Type().(*types.Named); !ok || secTyp.Obj().Id() != "_.error" {
-					return nil, fmt.Errorf("second resolvers result must be an error")
+				ftyp, err := underlingType(typeField.Type())
+				if err != nil {
+					return err
 				}
-				field.HasError = true
-			default:
-				return nil, fmt.Errorf("resolvers must have exactly two results and second one should be an error")
+				field.Type = *ftyp
+				fields = append(fields, field)
 			}
 
-			resultTyp := methodResults.At(0)
-			rtyp, err := underlingType(resultTyp.Type())
-			if err != nil {
-				return nil, err
+			for i := 0; i < namedTyp.NumMethods(); i++ {
+				method := namedTyp.Method(i)
+
+				if !method.Exported() {
+					continue
+				}
+
+				if kind == INPUTOBJECT {
+					return fmt.Errorf("Input types can not have resolvers")
+				}
+
+				methodSig := method.Type().(*types.Signature)
+
+				fieldName := method.Name()
+				field := Field{}
+				field.Name = fieldName
+				field.IsMethod = true
+				// TODO field.Description
+
+				params := methodSig.Params()
+				for i := 0; i < params.Len(); i++ {
+					param := params.At(i)
+					if param.Name() == "args" {
+						var argsStruct *types.Struct
+						switch xx := param.Type().(type) {
+						case *types.Named:
+							argsStruct = xx.Underlying().(*types.Struct)
+						case *types.Struct:
+							argsStruct = xx
+						default:
+							return fmt.Errorf("args can only be struct")
+						}
+						for i := 0; i < argsStruct.NumFields(); i++ {
+							argField := argsStruct.Field(i)
+
+							if !argField.Exported() {
+								continue
+							}
+
+							atyp, err := underlingType(argField.Type())
+							if err != nil {
+								return err
+							}
+
+							field.Args = append(field.Args, InputValue{
+								Name: argField.Name(),
+								Type: *atyp,
+								// TODO Description: "",
+							})
+						}
+						field.HasArgs = true
+					} else {
+						if err := g.AddDependency(param); err != nil {
+							return err
+						}
+					}
+					field.Params = append(field.Params, param)
+				}
+
+				methodResults := methodSig.Results()
+
+				switch methodResults.Len() {
+				case 0:
+					return fmt.Errorf("resolvers must return at least one result")
+				case 1:
+				case 2:
+					if secTyp, ok := methodResults.At(1).Type().(*types.Named); !ok || secTyp.Obj().Id() != "_.error" {
+						return fmt.Errorf("second resolvers result must be an error")
+					}
+					field.HasError = true
+				default:
+					return fmt.Errorf("resolvers must have exactly two results and second one should be an error")
+				}
+
+				resultTyp := methodResults.At(0)
+				rtyp, err := underlingType(resultTyp.Type())
+				if err != nil {
+					return err
+				}
+
+				field.Type = *rtyp
+				fields = append(fields, field)
 			}
 
-			field.Type = *rtyp
-			fields = append(fields, field)
+			return nil
+		}
+
+		if err := addStrucFields(x); err != nil {
+			return nil, err
 		}
 
 		if len(fields) == 0 {

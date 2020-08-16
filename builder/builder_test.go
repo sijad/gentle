@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"fmt"
 	"go/types"
 	"os"
 	"testing"
@@ -39,6 +38,6 @@ func TestVarType(t *testing.T) {
 
 	err = builder.Code(os.Stdout)
 	if err != nil {
-		fmt.Println(err)
+		t.Error(err)
 	}
 }
