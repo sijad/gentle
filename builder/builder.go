@@ -112,8 +112,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 
 		fullType := FullType{}
 		fullType.Id = id
-		// fullType.Type = x
 		fullType.Name = name
+		fullType.PackageName = x.Obj().Pkg().Name()
+		fullType.PackagePath = x.Obj().Pkg().Path()
 
 		if types.Implements(t, g.scalarInterface) {
 			fullType.Kind = SCALAR
@@ -158,9 +159,12 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 
 		var addStrucFields func(namedTyp *types.Named) error
 		addStrucFields = func(namedTyp *types.Named) error {
-			strct, ok := namedTyp.Underlying().(*types.Struct)
-			if !ok {
-				return fmt.Errorf("only named structs are supported")
+			var strct *types.Struct
+			switch t := namedTyp.Underlying().(type) {
+			case *types.Struct:
+				strct = t
+			default:
+				return fmt.Errorf("only named structs are supported, got %s", t.String())
 			}
 
 			for i := 0; i < strct.NumFields(); i++ {
@@ -290,8 +294,6 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 		fullType.Kind = kind
 		// TODO fullType.Description
 		fullType.Fields = fields
-		fullType.PackageName = x.Obj().Pkg().Name()
-		fullType.PackagePath = x.Obj().Pkg().Path()
 
 		g.AddFullType(fullType)
 		return nonNullAbleTypeRef(&TypeRef{
