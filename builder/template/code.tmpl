@@ -99,6 +99,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			out := graphql.NewFieldSet(fields)
 			for i, field := range fields {
 				switch field.Name {
+				case "__typename":
+						out.Values[i] = encodingBasic.MarshalString({{$type.Name | quote}})
 				{{- range $field := $type.Fields}}
 				case {{$field.Name | lowerCaseFirst | quote}}:
 					{{- if $field.IsMethod}}
