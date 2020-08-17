@@ -1,8 +1,8 @@
-<p align="center">🚧🚧 **this is WIP software** 🚧🚧</p>
+<p align="center">🚧🚧 this is WIP software 🚧🚧</p>
 
-<h2 align="center">
+<h3 align="center">
   Gentle
-</h2>
+</h3>
 
 <p align="center">
   Fast, simple, type-safe, code-first GraphQL framework.
