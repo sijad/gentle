@@ -1,4 +1,4 @@
-package echo
+package simple
 
 import (
 	"context"
@@ -48,12 +48,12 @@ func (r *Query) RandomNumber(ctx context.Context) (*int, error) {
 	return nil, errors.New("not found")
 }
 
-func (r Query) RandomYesOrNo(ctx context.Context) YesNo {
+func (r Query) RandomYesOrNo(ctx context.Context) []YesNo {
 	rand.Seed(time.Now().UnixNano())
 	if rand.Intn(2) == 1 {
-		return true
+		return []YesNo{true}
 	} else {
-		return false
+		return []YesNo{false}
 	}
 }
 

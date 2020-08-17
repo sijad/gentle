@@ -129,17 +129,32 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 
 				// TODO args
 
-				res := obj.{{$field.Name}}(
-					{{- range $param := $field.Params}}
-						{{if eq $param.Name "args" -}}
-							args,
-						{{- else if eq $param.Name "ctx" -}}
-							ctx,
-						{{- else -}}
-							ec.di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
-						{{- end -}}
-					{{- end}}
-				)
+				resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+					ctx = rctx // use context from middleware stack in children
+					return obj.{{$field.Name}}(
+						{{- range $param := $field.Params}}
+							{{if eq $param.Name "args" -}}
+								args,
+							{{- else if eq $param.Name "ctx" -}}
+								ctx,
+							{{- else -}}
+								ec.di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
+							{{- end -}}
+						{{- end}}
+					){{- if not $field.HasError -}}, nil{{- end}}
+				})
+
+				if err != nil {
+					ec.Error(ctx, err)
+					return graphql.Null
+				}
+
+				if resTmp == nil {
+					return graphql.Null
+				}
+
+				res := resTmp.({{typeGo $field.Type $root.Types}})
+				fc.Result = res
 
 				return ec.{{$field.Type | typeMarshalerMethodName}}(ctx, field.Selections, res)
 			}
@@ -159,6 +174,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 			{{ if eq $type.Kind "OBJECT" -}}
 				// TODO
+				return graphql.Null
+			{{- else if eq $type.Kind "LIST" -}}
+				// TODO LIST
 				return graphql.Null
 			{{- else if isBasicScalar $type -}}
 				return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
