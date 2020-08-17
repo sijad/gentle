@@ -176,8 +176,23 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				// TODO
 				return graphql.Null
 			{{- else if eq $type.Kind "LIST" -}}
-				// TODO LIST
-				return graphql.Null
+				arr := *v
+				ret := make(graphql.Array, len(arr))
+				var wg sync.WaitGroup
+				wg.Add(len(arr))
+				for i := range arr {
+					fc := &graphql.FieldContext{
+						Index:  &i,
+						Result: &arr[i],
+					}
+					ctx := graphql.WithFieldContext(ctx, fc)
+					go func(i int) {
+						defer wg.Done()
+						ret[i] = ec.{{$type.OfType | typeMarshalerMethodName}}(ctx, sel, arr[i])
+					}(i)
+				}
+				wg.Wait()
+				return ret
 			{{- else if isBasicScalar $type -}}
 				return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
 			{{- else -}}

@@ -24,13 +24,14 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 	fullTypes := g.FullTypes()
 	typesMap := make(map[string]FullType, len(fullTypes))
 	imports := map[string]string{
-		"context":                             "",
-		"bytes":                               "",
-		"github.com/99designs/gqlgen/graphql": "",
-		// "github.com/99designs/gqlgen/graphql/introspection": "",
+		"context":                                "",
+		"bytes":                                  "",
+		"github.com/99designs/gqlgen/graphql":    "",
+		"sync":                                   "", // TODO check if we really need sync
 		"github.com/vektah/gqlparser/v2/ast":     "",
 		"github.com/vektah/gqlparser/v2":         "gqlparser",
 		"github.com/sijad/gentle/encoding/basic": "encodingBasic", // TODO check if we really need basic encoding
+		// "github.com/99designs/gqlgen/graphql/introspection": "",
 	}
 
 	marshallers := []TypeRef{}
