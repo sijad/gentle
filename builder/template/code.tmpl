@@ -133,12 +133,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 					{{- range $param := $field.Params}}
 						{{if eq $param.Name "args" -}}
 							args,
+						{{- else if eq $param.Name "ctx" -}}
+							ctx,
 						{{- else -}}
-							{{if eq $param.Name "ctx" -}}
-								ctx,
-							{{- else -}}
-								ec.di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
-							{{- end -}}
+							ec.di.{{index $root.DependenciesNameMap $param.Name | upperCaseFirst}},
 						{{- end -}}
 					{{- end}}
 				)
@@ -162,12 +160,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			{{ if eq $type.Kind "OBJECT" -}}
 				// TODO
 				return graphql.Null
+			{{- else if isBasicScalar $type -}}
+				return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
 			{{- else -}}
-				{{ if isBasicScalar $type -}}
-					return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
-				{{- else -}}
-					return encodingBasic.MarshalScalar(v)
-				{{- end }}
+				return encodingBasic.MarshalScalar(v)
 			{{- end }}
 		{{- end }}
 	}
