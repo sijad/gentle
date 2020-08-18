@@ -118,7 +118,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 
 		if types.Implements(t, g.scalarInterface) || types.Implements(types.NewPointer(t), g.scalarInterface) {
 			fullType.Kind = SCALAR
-			g.AddFullType(fullType)
+			if err := g.AddFullType(fullType); err != nil {
+				return nil, err
+			}
 			return nonNullAbleTypeRef(&TypeRef{
 				Kind: SCALAR,
 				Name: &name,
@@ -299,7 +301,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 		// TODO fullType.Description
 		fullType.Fields = fields
 
-		g.AddFullType(fullType)
+		if err := g.AddFullType(fullType); err != nil {
+			return nil, err
+		}
 		return nonNullAbleTypeRef(&TypeRef{
 			Kind: kind,
 			Name: &name,

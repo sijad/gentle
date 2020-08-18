@@ -20,7 +20,10 @@ type CodeData struct {
 
 func (g *gqlBuilder) Code(w io.Writer) error {
 	var sdlBuf bytes.Buffer
-	g.SDL(&sdlBuf)
+
+	if err := g.SDL(&sdlBuf); err != nil {
+		return err
+	}
 
 	fullTypes := g.FullTypes()
 	typesMap := make(map[string]FullType, len(fullTypes))
@@ -93,7 +96,10 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 
 	formatted, err := format.Source(source.Bytes())
 	if err != nil {
-		w.Write(source.Bytes())
+		// write to buffer for debuging
+		if _, err := w.Write(source.Bytes()); err != nil {
+			return err
+		}
 		return err
 	}
 

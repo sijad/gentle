@@ -42,7 +42,9 @@ func MarshalInt32(i int32) graphql.Marshaler {
 // MarshalInt64 returns graphql for int64
 func MarshalInt64(i int64) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		io.WriteString(w, strconv.FormatInt(i, 10))
+		if _, err := io.WriteString(w, strconv.FormatInt(i, 10)); err != nil {
+			panic(err)
+		}
 	})
 }
 
@@ -69,21 +71,27 @@ func MarshalUint32(i uint32) graphql.Marshaler {
 // MarshalUint64 returns graphql for uint64
 func MarshalUint64(i uint64) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		io.WriteString(w, strconv.FormatUint(i, 10))
+		if _, err := io.WriteString(w, strconv.FormatUint(i, 10)); err != nil {
+			panic(err)
+		}
 	})
 }
 
 // MarshalFloat32 returns graphql for float32
 func MarshalFloat32(f float32) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		io.WriteString(w, fmt.Sprintf("%g", f))
+		if _, err := io.WriteString(w, fmt.Sprintf("%g", f)); err != nil {
+			panic(err)
+		}
 	})
 }
 
 // MarshalFloat32 returns graphql for float64
 func MarshalFloat64(f float64) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		io.WriteString(w, fmt.Sprintf("%g", f))
+		if _, err := io.WriteString(w, fmt.Sprintf("%g", f)); err != nil {
+			panic(err)
+		}
 	})
 }
 
