@@ -46,28 +46,28 @@ func MarshalInt64(i int64) graphql.Marshaler {
 	})
 }
 
-// MarshalUInt returns graphql for uint
-func MarshalUInt(i uint) graphql.Marshaler {
-	return MarshalUInt64(uint64(i))
+// MarshalUint returns graphql for uint
+func MarshalUint(i uint) graphql.Marshaler {
+	return MarshalUint64(uint64(i))
 }
 
-// MarshalUInt8 returns graphql for uint8
-func MarshalUInt8(i uint8) graphql.Marshaler {
-	return MarshalUInt64(uint64(i))
+// MarshalUint8 returns graphql for uint8
+func MarshalUint8(i uint8) graphql.Marshaler {
+	return MarshalUint64(uint64(i))
 }
 
-// MarshalUInt16 returns graphql for uint16
-func MarshalUInt16(i uint16) graphql.Marshaler {
-	return MarshalUInt64(uint64(i))
+// MarshalUint16 returns graphql for uint16
+func MarshalUint16(i uint16) graphql.Marshaler {
+	return MarshalUint64(uint64(i))
 }
 
-// MarshalUInt32 returns graphql for uint32
-func MarshalUInt32(i uint32) graphql.Marshaler {
-	return MarshalUInt64(uint64(i))
+// MarshalUint32 returns graphql for uint32
+func MarshalUint32(i uint32) graphql.Marshaler {
+	return MarshalUint64(uint64(i))
 }
 
-// MarshalUInt64 returns graphql for uint64
-func MarshalUInt64(i uint64) graphql.Marshaler {
+// MarshalUint64 returns graphql for uint64
+func MarshalUint64(i uint64) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
 		io.WriteString(w, strconv.FormatUint(i, 10))
 	})
