@@ -44,6 +44,14 @@ func (r *Query) Echo(args struct{ Txt string }) *EchoPayload {
 	return &EchoPayload{args.Txt}
 }
 
+type SimpleEchoInputArgs struct {
+	Txt string
+}
+
+func (r *Query) SimpleEcho(args SimpleEchoInputArgs) *string {
+	return &args.Txt
+}
+
 func (r *Query) RandomNumber(ctx context.Context) (*int, error) {
 	return nil, errors.New("not found")
 }

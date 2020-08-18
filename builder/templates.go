@@ -22,14 +22,15 @@ func init() {
 var templates = template.New("templates")
 
 var funcMap = template.FuncMap{
-	"gqlType":                 gqlType,
-	"lowerCaseFirst":          lowerCaseFirst,
-	"upperCaseFirst":          upperCaseFirst,
-	"quote":                   strconv.Quote,
-	"typeGo":                  typeGo,
-	"rawQuote":                rawQuote,
-	"typeMarshalerMethodName": typeMarshalerMethodName,
-	"isBasicScalar":           isBasicScalar,
+	"gqlType":                   gqlType,
+	"lowerCaseFirst":            lowerCaseFirst,
+	"upperCaseFirst":            upperCaseFirst,
+	"quote":                     strconv.Quote,
+	"typeGo":                    typeGo,
+	"rawQuote":                  rawQuote,
+	"typeMarshalerMethodName":   typeMarshalerMethodName,
+	"typeUnmarshalerMethodName": typeUnmarshalerMethodName,
+	"isBasicScalar":             isBasicScalar,
 }
 
 func lowerCaseFirst(s string) string {
@@ -126,6 +127,10 @@ func _typeMarshalerMethodName(typ *TypeRef) string {
 	default:
 		panic(fmt.Sprintf("cannot marshal %s", typ.Kind))
 	}
+}
+
+func typeUnmarshalerMethodName(typ *TypeRef) string {
+	return "Unmarshal" + _typeMarshalerMethodName(typ)
 }
 
 func isBasicScalar(typ *TypeRef) bool {

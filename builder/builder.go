@@ -229,6 +229,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 						default:
 							return fmt.Errorf("args can only be struct")
 						}
+						if argsStruct.NumFields() == 0 {
+							return fmt.Errorf("args must have at least one field")
+						}
 						for i := 0; i < argsStruct.NumFields(); i++ {
 							argField := argsStruct.Field(i)
 
@@ -247,7 +250,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 								// TODO Description: "",
 							})
 						}
-						field.HasArgs = true
+						field.ArgsType = argsStruct
 					} else {
 						if err := g.AddDependency(param); err != nil {
 							return err

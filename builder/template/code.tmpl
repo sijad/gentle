@@ -128,7 +128,14 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				}
 				ctx = graphql.WithFieldContext(ctx, fc)
 
-				// TODO args
+				{{ if $field.ArgsType }}
+					rawArgs := field.ArgumentMap(ec.Variables)
+					args, err := ec._field_{{$type.Name}}_{{$field.Name}}_args(ctx, rawArgs)
+					if err != nil {
+						ec.Error(ctx, err)
+						return graphql.Null
+					}
+				{{- end}}
 
 				resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 					ctx = rctx // use context from middleware stack in children
@@ -159,12 +166,29 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 
 				return ec.{{$field.Type | typeMarshalerMethodName}}(ctx, field.Selections, res)
 			}
+			{{ if $field.ArgsType }}
+				func (ec *executionContext) _field_{{$type.Name}}_{{$field.Name}}_args(ctx context.Context, rawArgs map[string]interface{}) ({{$field.ArgsType.String}}, error) {
+					args := {{$field.ArgsType.String}}{}
+					for key, val := range rawArgs {
+						switch key {
+							{{- range $arg := $field.Args}}
+								case {{$arg.Name | lowerCaseFirst | quote}}:
+									v, err := ec.{{$arg.Type | typeUnmarshalerMethodName}}(ctx, val)
+									if err != nil {
+										return args, err
+									}
+									args.{{$arg.Name}} = v
+							{{- end}}
+						}
+					}
+					return args, nil
+				}
+			{{- end}}
 		{{end -}}
 	{{end}}
 {{end}}
 
 // Marshallers
-
 {{range $type := .Marshallers}}
 	func (ec *executionContext) {{$type | typeMarshalerMethodName}}(ctx context.Context, sel ast.SelectionSet, v {{typeGo $type $root.Types}}) graphql.Marshaler {
 		{{ if eq $type.Kind "NONNULL" -}}
@@ -197,6 +221,38 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
 			{{- else -}}
 				return encodingBasic.MarshalScalar(v)
+			{{- end }}
+		{{- end }}
+	}
+{{end}}
+
+// Unmarshallers
+{{range $type := .Unmarshallers}}
+	func (ec *executionContext) {{$type | typeUnmarshalerMethodName}}(ctx context.Context, v interface{}) ({{typeGo $type $root.Types}}, error) {
+		var defVal {{typeGo $type $root.Types}}
+		if v == nil {
+			return defVal, nil
+		}
+		{{ if eq $type.Kind "NONNULL" -}}
+			val, err := ec.{{$type.OfType | typeUnmarshalerMethodName}}(ctx, v)
+			if err != nil {
+				return defVal, err
+			}
+			if val == nil {
+				return defVal, nil
+			}
+			return *val, nil
+		{{- else -}}
+			{{ if eq $type.Kind "OBJECT" -}}
+				// TODO object args return
+			{{- else if eq $type.Kind "LIST" -}}
+				// TODO list args return
+			{{- else if isBasicScalar $type -}}
+				val, err := encodingBasic.Unmarshal{{$type.Name | upperCaseFirst}}(v)
+				return &val, err
+			{{- else -}}
+				err := defVal.UnmarshalGQL(v)
+				return defVal, err
 			{{- end }}
 		{{- end }}
 	}

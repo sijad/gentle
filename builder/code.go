@@ -14,6 +14,7 @@ type CodeData struct {
 	Dependencies        map[string]*types.Var
 	DependenciesNameMap map[string]string
 	Marshallers         []TypeRef
+	Unmarshallers       []TypeRef
 	Sdl                 string
 }
 
@@ -36,6 +37,8 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 
 	marshallers := []TypeRef{}
 	marshallersMap := make(map[string]bool)
+	unmarshallers := []TypeRef{}
+	unmarshallersMap := make(map[string]bool)
 
 	for _, v := range fullTypes {
 		typesMap[v.Name] = v
@@ -54,8 +57,21 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 				}
 				typ = typ.OfType
 			}
-		}
 
+			if field.ArgsType != nil {
+				for _, arg := range field.Args {
+					typ := &arg.Type
+					for typ != nil {
+						name := typeUnmarshalerMethodName(typ)
+						if _, ok := unmarshallersMap[name]; !ok {
+							unmarshallersMap[name] = true
+							unmarshallers = append(unmarshallers, *typ)
+						}
+						typ = typ.OfType
+					}
+				}
+			}
+		}
 	}
 
 	d := CodeData{
@@ -66,6 +82,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		Types:               typesMap,
 		Sdl:                 sdlBuf.String(),
 		Marshallers:         marshallers,
+		Unmarshallers:       unmarshallers,
 	}
 
 	source := &bytes.Buffer{}
