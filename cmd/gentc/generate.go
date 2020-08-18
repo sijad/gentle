@@ -94,10 +94,7 @@ func packagePath(target string) (string, error) {
 		return "", err
 	}
 
-	var parts []string
-
 	if _, err := os.Stat(realPath); os.IsNotExist(err) {
-		parts = append(parts, filepath.Base(realPath))
 		realPath = filepath.Dir(realPath)
 	}
 
