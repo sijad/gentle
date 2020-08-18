@@ -324,7 +324,7 @@ func NewGQLBuilder() *gqlBuilder {
 	b.dependencies = make(map[string]*types.Var)
 	b.dependenciesNameMap = make(map[string]string)
 
-	pkgs, _ := packages.Load(&packages.Config{Mode: packages.LoadSyntax}, scalarInterface.PkgPath())
+	pkgs, _ := packages.Load(&packages.Config{Mode: packages.NeedTypes | packages.NeedTypesInfo}, scalarInterface.PkgPath())
 	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)
 
 	return b
