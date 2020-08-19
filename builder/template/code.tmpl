@@ -243,10 +243,12 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 			return *val, nil
 		{{- else -}}
-			{{ if eq $type.Kind "OBJECT" -}}
+			{{ if eq $type.Kind "INPUTOBJECT" -}}
 				// TODO object args return
+				return nil, nil
 			{{- else if eq $type.Kind "LIST" -}}
 				// TODO list args return
+				return nil, nil
 			{{- else if isBasicScalar $type -}}
 				val, err := encodingBasic.Unmarshal{{$type.Name | upperCaseFirst}}(v)
 				return &val, err
