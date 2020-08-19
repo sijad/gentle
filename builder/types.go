@@ -26,7 +26,7 @@ type Field struct {
 	DeprecationReason *string
 	IsMethod          bool
 	HasError          bool
-	ArgsType          *types.Struct
+	HasArgs           bool
 	Params            []*types.Var
 }
 

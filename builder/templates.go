@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -31,6 +32,7 @@ var funcMap = template.FuncMap{
 	"typeMarshalerMethodName":   typeMarshalerMethodName,
 	"typeUnmarshalerMethodName": typeUnmarshalerMethodName,
 	"isBasicScalar":             isBasicScalar,
+	"structTypeGo":              structTypeGo,
 }
 
 func lowerCaseFirst(s string) string {
@@ -97,7 +99,7 @@ func typeGo(typ *TypeRef, fullTypes map[string]FullType) string {
 			}
 			typName += fullType.PackageName + "." + name
 		}
-	case OBJECT:
+	case OBJECT, INPUTOBJECT:
 		name := *typ.Name
 		fullType, ok := fullTypes[name]
 		if !ok {
@@ -108,6 +110,16 @@ func typeGo(typ *TypeRef, fullTypes map[string]FullType) string {
 		panic(fmt.Sprintf("cannot convert %s to golang type", typ.Kind))
 	}
 	return typName
+}
+
+func structTypeGo(args []InputValue, fullTypes map[string]FullType) string {
+	var buf bytes.Buffer
+	buf.WriteString("struct{")
+	for _, arg := range args {
+		buf.WriteString(arg.Name + " " + typeGo(&arg.Type, fullTypes) + "\n")
+	}
+	buf.WriteString("}")
+	return buf.String()
 }
 
 func typeMarshalerMethodName(typ *TypeRef) string {
@@ -125,12 +137,27 @@ func _typeMarshalerMethodName(typ *TypeRef) string {
 	case OBJECT:
 		return "Object" + *typ.Name
 	default:
-		panic(fmt.Sprintf("cannot marshal %s", typ.Kind))
+		panic(fmt.Sprintf("cannot create marshaller for %s (%s)", *typ.Name, typ.Kind))
 	}
 }
 
 func typeUnmarshalerMethodName(typ *TypeRef) string {
-	return "Unmarshal" + _typeMarshalerMethodName(typ)
+	return "Unmarshal" + _typeUnmarshalerMethodName(typ)
+}
+
+func _typeUnmarshalerMethodName(typ *TypeRef) string {
+	switch typ.Kind {
+	case LIST:
+		return "List" + _typeUnmarshalerMethodName(typ.OfType)
+	case NONNULL:
+		return "NonNull" + _typeUnmarshalerMethodName(typ.OfType)
+	case SCALAR:
+		return *typ.Name
+	case INPUTOBJECT:
+		return "Input" + *typ.Name
+	default:
+		panic(fmt.Sprintf("cannot create unmarshaller for %s (%s)", *typ.Name, typ.Kind))
+	}
 }
 
 func isBasicScalar(typ *TypeRef) bool {

@@ -255,7 +255,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 								// TODO Description: "",
 							})
 						}
-						field.ArgsType = argsStruct
+						field.HasArgs = true
 					} else {
 						if err := g.AddDependency(param); err != nil {
 							return err

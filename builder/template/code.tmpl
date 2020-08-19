@@ -128,7 +128,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				}
 				ctx = graphql.WithFieldContext(ctx, fc)
 
-				{{ if $field.ArgsType }}
+				{{ if $field.HasArgs }}
 					rawArgs := field.ArgumentMap(ec.Variables)
 					args, err := ec._field_{{$type.Name}}_{{$field.Name}}_args(ctx, rawArgs)
 					if err != nil {
@@ -166,9 +166,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 
 				return ec.{{$field.Type | typeMarshalerMethodName}}(ctx, field.Selections, res)
 			}
-			{{ if $field.ArgsType }}
-				func (ec *executionContext) _field_{{$type.Name}}_{{$field.Name}}_args(ctx context.Context, rawArgs map[string]interface{}) ({{$field.ArgsType.String}}, error) {
-					args := {{$field.ArgsType.String}}{}
+			{{ if $field.HasArgs }}
+				func (ec *executionContext) _field_{{$type.Name}}_{{$field.Name}}_args(ctx context.Context, rawArgs map[string]interface{}) ({{structTypeGo $field.Args $root.Types}}, error) {
+					args := {{structTypeGo $field.Args $root.Types}}{}
 					for key, val := range rawArgs {
 						switch key {
 							{{- range $arg := $field.Args}}

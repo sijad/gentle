@@ -45,7 +45,13 @@ func (r *Query) Echo(args struct{ Txt string }) *EchoPayload {
 }
 
 type SimpleEchoInputArgs struct {
-	Txt string
+	Txt    string
+	Things *[]*[]int
+	Test2  *[]*[]TestInput
+}
+
+type TestInput struct {
+	A string
 }
 
 func (r *Query) SimpleEcho(args SimpleEchoInputArgs) *string {

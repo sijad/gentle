@@ -61,7 +61,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 				typ = typ.OfType
 			}
 
-			if field.ArgsType != nil {
+			if field.HasArgs {
 				for _, arg := range field.Args {
 					typ := &arg.Type
 					for typ != nil {
