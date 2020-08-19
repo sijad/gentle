@@ -82,7 +82,10 @@ func (g *gqlBuilder) AddDependency(dep *types.Var) error {
 func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 	switch x := t.(type) {
 	case *types.Basic:
-		name := basicTypeName(x.Kind())
+		name, err := basicTypeName(x.Kind())
+		if err != nil {
+			return nil, fmt.Errorf("Cannot determine type of %x", x)
+		}
 		return nonNullAbleTypeRef(&TypeRef{
 			Kind: SCALAR,
 			Name: &name,
@@ -330,39 +333,46 @@ func NewGQLBuilder() *gqlBuilder {
 	return b
 }
 
-func basicTypeName(b types.BasicKind) string {
+func basicTypeName(b types.BasicKind) (string, error) {
+	var name string
 	switch b {
 	case types.Bool:
-		return "Boolean"
+		name = "Boolean"
 	case types.Int:
-		return "Int"
+		name = "Int"
 	case types.Uint:
-		return "Uint"
+		name = "Uint"
 	case types.Int8:
-		return "Int8"
+		name = "Int8"
 	case types.Uint8:
-		return "Uint8"
+		name = "Uint8"
 	case types.Int16:
-		return "Int16"
+		name = "Int16"
 	case types.Uint16:
-		return "Uint16"
+		name = "Uint16"
 	case types.Int32:
-		return "Int32"
+		name = "Int32"
 	case types.Uint32:
-		return "Uint32"
+		name = "Uint32"
 	case types.Int64:
-		return "Int64"
+		name = "Int64"
 	case types.Uint64:
-		return "Uint64"
+		name = "Uint64"
 	case types.Float32:
-		return "Float"
+		name = "Float"
 	case types.Float64:
-		return "Float64"
+		name = "Float64"
 	case types.String:
-		return "String"
-	default:
-		panic(fmt.Sprintf("Cannot determine type of %T", b))
+		name = "String"
+	case types.Invalid:
+		return "", fmt.Errorf("basic type is invalid")
 	}
+
+	if name != "" {
+		return name, nil
+	}
+
+	return "", fmt.Errorf("basic type %v is not supported", b)
 }
 
 func nonNullAbleTypeRef(typ *TypeRef) *TypeRef {
