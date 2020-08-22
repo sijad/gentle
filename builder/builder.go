@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/sijad/gentle"
-	"golang.org/x/tools/go/packages"
 )
 
 var scalarInterface = reflect.TypeOf(struct{ gentle.Scalar }{}).Field(0).Type
@@ -320,6 +319,47 @@ func (g *gqlBuilder) FullTypes() (types []FullType) {
 	return g.types
 }
 
+func (g *gqlBuilder) ImportPackage(schemaPackagePath string) error {
+	pkgPath, err := packagePath(schemaPackagePath)
+	if err != nil {
+		return err
+	}
+
+	pkgs, err := loadPackages(pkgPath)
+
+	if err != nil {
+		return err
+	}
+
+	query, err := lookupTypeName("Query", pkgs)
+	if err != nil {
+		return fmt.Errorf("Object lookup %s: %w", "Query", err)
+	}
+
+	mutation, err := lookupTypeName("Mutation", pkgs)
+	if err != nil {
+		return fmt.Errorf("Object lookup %s: %w", "Mutation", err)
+	}
+
+	if query == nil && mutation == nil {
+		return fmt.Errorf("Query or Mutation structs not found")
+	}
+
+	if query != nil {
+		if _, err := g.ImportType(query.Type()); err != nil {
+			return err
+		}
+	}
+
+	if mutation != nil {
+		if _, err := g.ImportType(mutation.Type()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func NewGQLBuilder() *gqlBuilder {
 	b := &gqlBuilder{}
 	b.typeMap = make(map[string]int)
@@ -327,7 +367,7 @@ func NewGQLBuilder() *gqlBuilder {
 	b.dependencies = make(map[string]*types.Var)
 	b.dependenciesNameMap = make(map[string]string)
 
-	pkgs, _ := packages.Load(&packages.Config{Mode: packages.NeedTypes | packages.NeedTypesInfo}, scalarInterface.PkgPath())
+	pkgs, _ := loadPackages(scalarInterface.PkgPath())
 	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)
 
 	return b
