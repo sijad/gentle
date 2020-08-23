@@ -1,12 +1,10 @@
 <p align="center">🚧🚧 this is WIP software 🚧🚧</p>
 
-<h3 align="center">Gentle</h3>
+<h1 align="center">Gentle</h1>
 
-<h1 align="center">
-  Fast, simple, type-safe, code-first GraphQL framework.
-</h1>
-
----
+<p align="center">
+  <strong>Fast</strong>, <strong>simple</strong>, <strong>type-safe</strong>, <strong>code-first</strong> <strong>GraphQL framework</strong>.
+</p>
 
 ### Quick Start
 
