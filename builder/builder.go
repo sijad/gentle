@@ -119,7 +119,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 		fullType.PackageName = x.Obj().Pkg().Name()
 		fullType.PackagePath = x.Obj().Pkg().Path()
 
-		if types.Implements(t, g.scalarInterface) || types.Implements(types.NewPointer(t), g.scalarInterface) {
+		if g.IsScalar(t) {
 			fullType.Kind = SCALAR
 			if err := g.AddFullType(fullType); err != nil {
 				return nil, err
@@ -152,26 +152,47 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 
 		// returns underlying element type and prevents infinite loop
 		underlingType := func(t types.Type) (*TypeRef, error) {
+			var parrentTypes []*TypeRef
 			typ := t
-			isPtr := false
-			if ptr, ok := typ.(*types.Pointer); ok {
-				isPtr = true
-				typ = ptr.Elem()
+
+		UnderlyingTypeLoop:
+			for {
+				switch tt := typ.(type) {
+				case *types.Pointer:
+					typ = tt.Elem()
+					parrentTypes = append(parrentTypes, &TypeRef{
+						Kind: NONNULL,
+					})
+				case *types.Slice:
+					typ = tt.Elem()
+					parrentTypes = append(parrentTypes, &TypeRef{
+						Kind: LIST,
+					})
+				default:
+					break UnderlyingTypeLoop
+				}
 			}
 
 			if typ, ok := typ.(*types.Named); ok {
-				if _, ok := g.constants[typ.String()]; ok {
+				if _, ok := g.constants[typ.String()]; ok || g.IsScalar(typ) {
 					return g.ImportType(t)
 				}
+
 				if g.processingFullTypes[typ.String()] {
-					ref := &TypeRef{
-						Kind: SCALAR,
+					name := typ.Obj().Name()
+					var kind TypeKind = OBJECT
+					if strings.HasSuffix(name, "Input") {
+						kind = INPUTOBJECT
+					}
+					parrentTypes = append(parrentTypes, &TypeRef{
+						Kind: kind,
 						Name: &name,
+					})
+					ref := parrentTypes[0]
+					for _, r := range parrentTypes {
+						ref.OfType = r
 					}
-					if isPtr {
-						return ref, nil
-					}
-					return nonNullAbleTypeRef(ref), nil
+					return ref, nil
 				}
 			}
 
@@ -386,6 +407,14 @@ func (g *gqlBuilder) ImportPackage(schemaPackagePath string) error {
 	}
 
 	return nil
+}
+
+func (g *gqlBuilder) IsScalar(typ types.Type) bool {
+	if types.Implements(typ, g.scalarInterface) {
+		return true
+	}
+
+	return types.Implements(types.NewPointer(typ), g.scalarInterface)
 }
 
 func NewGQLBuilder() *gqlBuilder {

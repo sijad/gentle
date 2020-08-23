@@ -91,6 +91,11 @@ func (r Query) EchoWeekDay(ctx context.Context, args struct{ Wd WeekDay }) WeekD
 	return args.Wd
 }
 
-func RandomYesOrNo(ctx context.Context) [][]YesNo {
-	return nil
+type MyQuery struct {
+	Q []*Query
+}
+
+func (r *Query) TestQuery(ctx context.Context) []MyQuery {
+	q := []*Query{r}
+	return []MyQuery{q}
 }
