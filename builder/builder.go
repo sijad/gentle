@@ -18,6 +18,7 @@ type gqlBuilder struct {
 	scalarInterface     *types.Interface
 	dependencies        map[string]*types.Var
 	dependenciesNameMap map[string]string
+	constants           map[string][]*types.Const
 }
 
 func (g *gqlBuilder) GetFullType(name string) *FullType {
@@ -129,6 +130,26 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			}), nil
 		}
 
+		if consts, ok := g.constants[id]; ok && len(consts) > 0 {
+			fullType.Kind = ENUM
+			values := make([]EnumValue, 0, len(consts))
+			for _, cnst := range consts {
+				val := EnumValue{
+					Name: cnst.Name(),
+					// TODO Description:
+				}
+				values = append(values, val)
+			}
+			fullType.EnumValues = values
+			if err := g.AddFullType(fullType); err != nil {
+				return nil, err
+			}
+			return nonNullAbleTypeRef(&TypeRef{
+				Kind: ENUM,
+				Name: &name,
+			}), nil
+		}
+
 		// returns underlying element type and prevents infinite loop
 		underlingType := func(t types.Type) (*TypeRef, error) {
 			typ := t
@@ -139,6 +160,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			}
 
 			if typ, ok := typ.(*types.Named); ok {
+				if _, ok := g.constants[typ.String()]; ok {
+					return g.ImportType(t)
+				}
 				if g.processingFullTypes[typ.String()] {
 					ref := &TypeRef{
 						Kind: SCALAR,
@@ -326,9 +350,13 @@ func (g *gqlBuilder) ImportPackage(schemaPackagePath string) error {
 	}
 
 	pkgs, err := loadPackages(pkgPath)
-
 	if err != nil {
 		return err
+	}
+
+	for _, cnst := range lookupConstants(pkgs) {
+		id := cnst.Type().String()
+		g.constants[id] = append(g.constants[id], cnst)
 	}
 
 	query, err := lookupTypeName("Query", pkgs)
@@ -366,6 +394,7 @@ func NewGQLBuilder() *gqlBuilder {
 	b.processingFullTypes = make(map[string]bool)
 	b.dependencies = make(map[string]*types.Var)
 	b.dependenciesNameMap = make(map[string]string)
+	b.constants = make(map[string][]*types.Const)
 
 	pkgs, _ := loadPackages(scalarInterface.PkgPath())
 	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)

@@ -217,6 +217,15 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				}
 				wg.Wait()
 				return ret
+			{{- else if eq $type.Kind "ENUM" -}}
+				switch *v {
+				{{- $ftype := $root.FullType $type -}}
+				{{- range $val := $ftype.EnumValues }}
+					case {{$ftype.PackageName}}.{{ $val.Name }}:
+						return encodingBasic.MarshalString({{$val.Name | quote}})
+				{{- end }}
+				}
+				panic("enum value not found")
 			{{- else if isBasicScalar $type -}}
 				return encodingBasic.Marshal{{$type.Name | upperCaseFirst}}(*v)
 			{{- else -}}
@@ -230,9 +239,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 {{range $type := .Unmarshallers}}
 	func (ec *executionContext) {{$type | typeUnmarshalerMethodName}}(ctx context.Context, v interface{}) ({{typeGo $type $root.Types}}, error) {
 		var defVal {{typeGo $type $root.Types}}
-		if v == nil {
-			return defVal, nil
-		}
 		{{ if eq $type.Kind "NONNULL" -}}
 			val, err := ec.{{$type.OfType | typeUnmarshalerMethodName}}(ctx, v)
 			if err != nil {
@@ -243,12 +249,27 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 			return *val, nil
 		{{- else -}}
+			if v == nil {
+				return defVal, nil
+			}
 			{{ if eq $type.Kind "INPUTOBJECT" -}}
 				// TODO object args return
 				return nil, nil
 			{{- else if eq $type.Kind "LIST" -}}
 				// TODO list args return
 				return nil, nil
+			{{- else if eq $type.Kind "ENUM" -}}
+				var val {{typeGo ($type | nonNullAbleTypeRef) $root.Types}}
+				switch v.(string) {
+				{{- $ftype := $root.FullType $type -}}
+				{{- range $val := $ftype.EnumValues }}
+					case {{$val.Name | quote}}:
+						val = {{$ftype.PackageName}}.{{ $val.Name }}
+				{{- end }}
+				default:
+					panic("invalid enum value")
+				}
+				return &val, nil
 			{{- else if isBasicScalar $type -}}
 				val, err := encodingBasic.Unmarshal{{$type.Name | upperCaseFirst}}(v)
 				return &val, err

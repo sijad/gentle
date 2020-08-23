@@ -61,3 +61,29 @@ func loadPackages(pkgPath string) ([]*packages.Package, error) {
 
 	return pkgs, nil
 }
+
+func lookupConstants(pkgs []*packages.Package) []*types.Const {
+	consts := []*types.Const{}
+
+	for _, pkg := range pkgs {
+		for _, v := range pkg.TypesInfo.Defs {
+			if v == nil {
+				continue
+			}
+
+			cnst, ok := v.(*types.Const)
+			if !ok || !cnst.Exported() {
+				continue
+			}
+
+			_, ok = cnst.Type().(*types.Named)
+			if !ok {
+				continue
+			}
+
+			consts = append(consts, cnst)
+		}
+	}
+
+	return consts
+}

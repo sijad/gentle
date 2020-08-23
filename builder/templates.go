@@ -33,6 +33,7 @@ var funcMap = template.FuncMap{
 	"typeUnmarshalerMethodName": typeUnmarshalerMethodName,
 	"isBasicScalar":             isBasicScalar,
 	"structTypeGo":              structTypeGo,
+	"nonNullAbleTypeRef":        nonNullAbleTypeRef,
 }
 
 func lowerCaseFirst(s string) string {
@@ -53,7 +54,7 @@ func gqlType(typ *TypeRef) string {
 		return "[" + gqlType(typ.OfType) + "]"
 	case NONNULL:
 		return gqlType(typ.OfType) + "!"
-	case SCALAR, INPUTOBJECT, OBJECT:
+	case SCALAR, INPUTOBJECT, OBJECT, ENUM:
 		return *typ.Name
 	default:
 		panic("not implemented")
@@ -99,7 +100,7 @@ func typeGo(typ *TypeRef, fullTypes map[string]FullType) string {
 			}
 			typName += fullType.PackageName + "." + name
 		}
-	case OBJECT, INPUTOBJECT:
+	case OBJECT, INPUTOBJECT, ENUM:
 		name := *typ.Name
 		fullType, ok := fullTypes[name]
 		if !ok {
@@ -136,8 +137,10 @@ func _typeMarshalerMethodName(typ *TypeRef) string {
 		return *typ.Name
 	case OBJECT:
 		return "Object" + *typ.Name
+	case ENUM:
+		return "Enum" + *typ.Name
 	default:
-		panic(fmt.Sprintf("cannot create marshaller for %s (%s)", *typ.Name, typ.Kind))
+		panic(fmt.Sprintf("cannot create marshaler for %s (%s)", *typ.Name, typ.Kind))
 	}
 }
 
@@ -155,6 +158,8 @@ func _typeUnmarshalerMethodName(typ *TypeRef) string {
 		return *typ.Name
 	case INPUTOBJECT:
 		return "Input" + *typ.Name
+	case ENUM:
+		return "Enum" + *typ.Name
 	default:
 		panic(fmt.Sprintf("cannot create unmarshaller for %s (%s)", *typ.Name, typ.Kind))
 	}

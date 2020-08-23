@@ -8,7 +8,23 @@ import (
 	"time"
 )
 
+type WeekDay int
+
+const (
+	// defines comment comment ...
+	Sunday WeekDay = iota
+	// defines comment comment ...
+	MONDAY
+	Tuesday
+	Wednesday
+	Thursday
+	Friday
+	Saturday
+)
+
+// Query defines comment comment ...
 type Query struct {
+	// Hello defines comment comment ...
 	Hello string
 }
 
@@ -69,6 +85,10 @@ func (r Query) RandomYesOrNo(ctx context.Context) []YesNo {
 	} else {
 		return []YesNo{false}
 	}
+}
+
+func (r Query) EchoWeekDay(ctx context.Context, args struct{ Wd WeekDay }) WeekDay {
+	return args.Wd
 }
 
 func RandomYesOrNo(ctx context.Context) [][]YesNo {

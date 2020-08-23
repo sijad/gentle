@@ -2,7 +2,13 @@
 {{- if eq $t.Kind "SCALAR" -}}
 scalar {{$t.Name}}
 {{- end}}
-{{- if or (eq $t.Kind "OBJECT") (eq $t.Kind "INPUTOBJECT") -}}
+{{- if or (eq $t.Kind "ENUM") -}}
+enum {{$t.Name}} {
+  {{- range $v := $t.EnumValues}}
+  {{$v.Name}}
+  {{- end}}
+}
+{{- else if or (eq $t.Kind "OBJECT") (eq $t.Kind "INPUTOBJECT") -}}
 {{if eq $t.Kind "OBJECT"}}type{{else}}input{{end}} {{$t.Name}} {
 {{- range $f := $t.Fields}}
   {{$f.Name | lowerCaseFirst}}

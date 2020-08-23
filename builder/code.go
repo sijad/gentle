@@ -18,6 +18,10 @@ type CodeData struct {
 	Sdl                 string
 }
 
+func (cd *CodeData) FullType(ref *TypeRef) FullType {
+	return cd.Types[*ref.Name]
+}
+
 func (g *gqlBuilder) Code(w io.Writer) error {
 	var sdlBuf bytes.Buffer
 
@@ -77,7 +81,7 @@ func (g *gqlBuilder) Code(w io.Writer) error {
 		}
 	}
 
-	d := CodeData{
+	d := &CodeData{
 		PackageName:         "graph",
 		Imports:             imports,
 		Dependencies:        g.dependencies,
