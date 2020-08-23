@@ -1,4 +1,4 @@
-<p align="center">🚧🚧 this is WIP software 🚧🚧</p>
+<p align="center">🚧🚧 this is pre-alpha software 🚧🚧</p>
 
 <h1 align="center">Gentle</h1>
 
@@ -8,7 +8,7 @@
 
 ### Quick Start
 
-it's recommended to installation Gentle using [Go modules](https://github.com/golang/go/wiki/Modules#quick-start).
+it's recommended to install Gentle using [Go modules](https://github.com/golang/go/wiki/Modules#quick-start).
 
 1. `go get github.com/sijad/gentle/cmd/gentc` to install Gentle
 2. `go run github.com/sijad/gentle/cmd/gentc init` to initialize a GraphQL project
