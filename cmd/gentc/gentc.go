@@ -31,8 +31,10 @@ func main() {
 			Short:   "generate go code for schema directory",
 			Example: "gentc generate ./graph/schema",
 			Args:    cobra.ExactArgs(1),
-			Run: func(cmd *cobra.Command, path []string) {
-				if err := generate(path[0], defaultGeneratedPath); err != nil {
+			Run: func(cmd *cobra.Command, paths []string) {
+				schemaPath := paths[0]
+				generatedPath := path.Base(schemaPath) + "generated.go"
+				if err := generate(schemaPath, generatedPath); err != nil {
 					log.Fatalln(err)
 				}
 			},
@@ -76,7 +78,7 @@ const (
 	defaultGeneratePath  = "./graph/generate.go"
 	genFile              = `package graph
 
-//go:generate go run github.com/sijad/gentle/cmd/gentc generate ./schema
+//go:generate go run github.com/sijad/gentle/cmd/gentc generate ./graph/schema
 `
 	defaultQuery = `package schema
 
