@@ -62,3 +62,8 @@ type TypeRef struct {
 	Name   *string
 	OfType *TypeRef
 }
+
+type Dependency struct {
+	Name string
+	Type *TypeRef
+}

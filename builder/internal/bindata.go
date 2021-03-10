@@ -113,7 +113,7 @@ func templateSdlTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "template/sdl.tmpl", size: 666, mode: os.FileMode(493), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "template/sdl.tmpl", size: 666, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

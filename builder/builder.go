@@ -16,7 +16,7 @@ type gqlBuilder struct {
 	typeMap             map[string]int
 	processingFullTypes map[string]bool
 	scalarInterface     *types.Interface
-	dependencies        map[string]*types.Var
+	dependencies        map[string]Dependency
 	dependenciesNameMap map[string]string
 	constants           map[string][]*types.Const
 }
@@ -65,10 +65,18 @@ func (g *gqlBuilder) AddDependency(dep *types.Var) error {
 		return nil
 	}
 
+	if _, ok := dep.Type().(*types.Named); !ok {
+		return fmt.Errorf("dependency must be an named type, got %s (%s)", dep.Name(), dep.Type())
+	}
+
 	if d, ok := g.dependencies[key]; ok {
-		depArgName = d.Name()
+		depArgName = d.Name
 	} else {
-		g.dependencies[key] = dep
+		ref, err := g.ImportType(dep.Type())
+		if err != nil {
+			return err
+		}
+		g.dependencies[key] = Dependency{depArgName, ref}
 	}
 
 	g.dependenciesNameMap[dep.Name()] = depArgName
@@ -421,7 +429,7 @@ func NewGQLBuilder() *gqlBuilder {
 	b := &gqlBuilder{}
 	b.typeMap = make(map[string]int)
 	b.processingFullTypes = make(map[string]bool)
-	b.dependencies = make(map[string]*types.Var)
+	b.dependencies = make(map[string]Dependency)
 	b.dependenciesNameMap = make(map[string]string)
 	b.constants = make(map[string][]*types.Const)
 

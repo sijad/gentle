@@ -3,7 +3,6 @@ package builder
 import (
 	"bytes"
 	"go/format"
-	"go/types"
 	"io"
 )
 
@@ -11,7 +10,7 @@ type CodeData struct {
 	PackageName         string
 	Imports             map[string]string
 	Types               map[string]FullType
-	Dependencies        map[string]*types.Var
+	Dependencies        map[string]Dependency
 	DependenciesNameMap map[string]string
 	Marshallers         []TypeRef
 	Unmarshallers       []TypeRef
