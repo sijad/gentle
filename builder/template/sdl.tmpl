@@ -1,16 +1,31 @@
 {{- range $t := .Types -}}
+{{- if $t.Description -}}
+"""
+{{$t.Description}}
+"""
+{{end -}}
 {{- if eq $t.Kind "SCALAR" -}}
 scalar {{$t.Name}}
 {{- end}}
 {{- if or (eq $t.Kind "ENUM") -}}
 enum {{$t.Name}} {
   {{- range $v := $t.EnumValues}}
+  {{- if $v.Description}}
+  """
+  {{$v.Description}}
+  """
+  {{end -}}
   {{$v.Name}}
   {{- end}}
 }
 {{- else if or (eq $t.Kind "OBJECT") (eq $t.Kind "INPUTOBJECT") -}}
 {{if eq $t.Kind "OBJECT"}}type{{else}}input{{end}} {{$t.Name}} {
 {{- range $f := $t.Fields}}
+  {{- if $f.Description}}
+  """
+  {{$f.Description}}
+  """
+  {{- end}}
   {{$f.Name | lowerCaseFirst}}
   {{- if gt (len $f.Args) 0 -}}
     (

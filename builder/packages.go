@@ -52,7 +52,7 @@ func packagePath(target string) (string, error) {
 }
 
 func loadPackages(pkgPath string) ([]*packages.Package, error) {
-	cfg := packages.Config{Mode: packages.NeedTypes | packages.NeedTypesInfo}
+	cfg := packages.Config{Mode: packages.NeedTypes | packages.NeedTypesInfo | packages.NeedSyntax}
 	pkgs, err := packages.Load(&cfg, pkgPath)
 
 	if err != nil {

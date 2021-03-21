@@ -8,7 +8,10 @@ import (
 	"time"
 )
 
-type WeekDay int
+type (
+	// my WeekDay Enum description...
+	WeekDay int
+)
 
 const (
 	// defines comment comment ...
@@ -22,13 +25,12 @@ const (
 	Saturday
 )
 
-// Query defines comment comment ...
+// Query description...
 type Query struct {
-	// Hello defines comment comment ...
-	Hello string
+	Hello string // test comment
 }
 
-// YesNo helps
+// YesNo description helps
 type YesNo bool
 
 func (y *YesNo) UnmarshalGQL(v interface{}) error {
@@ -66,10 +68,15 @@ type SimpleEchoInputArgs struct {
 	Test2  *[]*[]TestInput
 }
 
-type TestInput struct {
-	A string
-}
+type (
+	// TestInput represents an input struct...
+	TestInput struct {
+		// A represents a string
+		A string
+	}
+)
 
+// My method description...
 func (r *Query) SimpleEcho(args SimpleEchoInputArgs) *string {
 	return &args.Txt
 }

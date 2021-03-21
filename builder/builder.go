@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"go/ast"
 	"go/types"
 	"reflect"
 	"strings"
@@ -19,6 +20,7 @@ type gqlBuilder struct {
 	dependencies        map[string]Dependency
 	dependenciesNameMap map[string]string
 	constants           map[string][]*types.Const
+	docs                map[types.Object]string
 }
 
 func (g *gqlBuilder) GetFullType(name string) *FullType {
@@ -117,15 +119,17 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			return ref.OfType, nil
 		}
 	case *types.Named:
-		name := x.Obj().Name()
+		obj := x.Obj()
+		name := obj.Name()
 		id := x.String()
 		g.processingFullTypes[id] = true
 
 		fullType := FullType{}
 		fullType.Id = id
 		fullType.Name = name
-		fullType.PackageName = x.Obj().Pkg().Name()
-		fullType.PackagePath = x.Obj().Pkg().Path()
+		fullType.PackageName = obj.Pkg().Name()
+		fullType.PackagePath = obj.Pkg().Path()
+		fullType.Description = g.docs[obj]
 
 		if g.IsScalar(t) {
 			fullType.Kind = SCALAR
@@ -143,8 +147,8 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			values := make([]EnumValue, 0, len(consts))
 			for _, cnst := range consts {
 				val := EnumValue{
-					Name: cnst.Name(),
-					// TODO Description:
+					Name:        cnst.Name(),
+					Description: g.docs[cnst],
 				}
 				values = append(values, val)
 			}
@@ -221,7 +225,7 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 			case *types.Struct:
 				strct = t
 			default:
-				return fmt.Errorf("only named structs are supported, got %s", t.String())
+				return fmt.Errorf("only named struct are supported, got %s", t.String())
 			}
 
 			for i := 0; i < strct.NumFields(); i++ {
@@ -244,7 +248,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 				fieldName := typeField.Name()
 				field := Field{}
 				field.Name = fieldName
-				// TODO field.Description
+				if doc, ok := g.docs[typeField]; ok {
+					field.Description = doc
+				}
 
 				ftyp, err := underlingType(typeField.Type())
 				if err != nil {
@@ -271,7 +277,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 				field := Field{}
 				field.Name = fieldName
 				field.IsMethod = true
-				// TODO field.Description
+				if doc, ok := g.docs[method]; ok {
+					field.Description = doc
+				}
 
 				params := methodSig.Params()
 				for i := 0; i < params.Len(); i++ {
@@ -302,9 +310,9 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 							}
 
 							field.Args = append(field.Args, InputValue{
-								Name: argField.Name(),
-								Type: *atyp,
-								// TODO Description: "",
+								Name:        argField.Name(),
+								Type:        *atyp,
+								Description: g.docs[argField],
 							})
 						}
 						field.HasArgs = true
@@ -349,11 +357,10 @@ func (g *gqlBuilder) ImportType(t types.Type) (*TypeRef, error) {
 		}
 
 		if len(fields) == 0 {
-			return nil, fmt.Errorf("Named structs must have at aleast one exported property")
+			return nil, fmt.Errorf("Named struct must have at least one exported property")
 		}
 
 		fullType.Kind = kind
-		// TODO fullType.Description
 		fullType.Fields = fields
 
 		if err := g.AddFullType(fullType); err != nil {
@@ -386,6 +393,44 @@ func (g *gqlBuilder) ImportPackage(schemaPackagePath string) error {
 	for _, cnst := range lookupConstants(pkgs) {
 		id := cnst.Type().String()
 		g.constants[id] = append(g.constants[id], cnst)
+	}
+
+	for _, pkg := range pkgs {
+		for _, s := range pkg.Syntax {
+			cm := ast.NewCommentMap(pkg.Fset, s, s.Comments)
+			for k, c := range cm {
+				var typ types.Object
+				switch o := k.(type) {
+				case *ast.Field:
+					typ = pkg.TypesInfo.ObjectOf(o.Names[0])
+				case *ast.TypeSpec:
+					typ = pkg.TypesInfo.ObjectOf(o.Name)
+				case *ast.ValueSpec:
+					typ = pkg.TypesInfo.ObjectOf(o.Names[0])
+				case *ast.FuncDecl:
+					typ = pkg.TypesInfo.ObjectOf(o.Name)
+				case *ast.GenDecl:
+					for _, s := range o.Specs {
+						if f, _ := s.(*ast.TypeSpec); f != nil {
+							obj := pkg.TypesInfo.ObjectOf(f.Name)
+							if obj != nil && g.docs[obj] == "" {
+								txt := strings.TrimSpace(c[0].Text())
+								g.docs[obj] = txt
+							}
+						}
+					}
+				}
+
+				if typ == nil {
+					continue
+				}
+
+				txt := strings.TrimSpace(c[0].Text())
+				if txt != "" {
+					g.docs[typ] = txt
+				}
+			}
+		}
 	}
 
 	query, err := lookupTypeName("Query", pkgs)
@@ -432,6 +477,7 @@ func NewGQLBuilder() *gqlBuilder {
 	b.dependencies = make(map[string]Dependency)
 	b.dependenciesNameMap = make(map[string]string)
 	b.constants = make(map[string][]*types.Const)
+	b.docs = make(map[types.Object]string)
 
 	pkgs, _ := loadPackages(scalarInterface.PkgPath())
 	b.scalarInterface = pkgs[0].Types.Scope().Lookup(scalarInterface.Name()).Type().Underlying().(*types.Interface)
